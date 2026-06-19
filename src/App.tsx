@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { run, toPython } from './lang';
 import type { SnilError } from './lang';
 import { formatError } from './lang/diagnose';
+import { formatSnil } from './lang/format';
 
 // --- Mifano (examples) — chanzo cha .snil kimewekwa hapa moja kwa moja ---
 const MIFANO: { id: string; jina: string; maelezo: string; chanzo: string }[] = [
@@ -63,6 +64,93 @@ kwa kila p katika bei
     jumla = jumla + p
 mwisho
 onyesha "Jumla ya bei ni " + jumla
+`,
+  },
+  {
+    id: 'fizzbuzz',
+    jina: 'FizaBuzi',
+    maelezo: 'Masharti na vitanzi',
+    chanzo: `# FizaBuzi — hesabu 1 hadi 20.
+# "Fiza" kwa vizidisho vya 3, "Buzi" kwa vya 5, "FizaBuzi" kwa vyote viwili.
+kwa kila n kutoka 1 hadi 20
+    ikiwa n % 3 == 0 na n % 5 == 0 basi
+        onyesha "FizaBuzi"
+    vinginevyo
+        ikiwa n % 3 == 0 basi
+            onyesha "Fiza"
+        vinginevyo
+            ikiwa n % 5 == 0 basi
+                onyesha "Buzi"
+            vinginevyo
+                onyesha n
+            mwisho
+        mwisho
+    mwisho
+mwisho
+`,
+  },
+  {
+    id: 'wastani',
+    jina: 'Wastani',
+    maelezo: 'Alama za wanafunzi',
+    chanzo: `# Wastani wa alama za wanafunzi.
+# Tunahesabu jumla na wastani, kisha tunaonyesha kufaulu/kufeli kwa kila mwanafunzi.
+weka alama kuwa [75, 48, 90, 33, 62]
+weka jumla kuwa 0
+
+kwa kila a katika alama
+    jumla = jumla + a
+    ikiwa a >= 50 basi
+        onyesha "Alama " + a + ": amefaulu"
+    vinginevyo
+        onyesha "Alama " + a + ": amefeli"
+    mwisho
+mwisho
+
+onyesha "Jumla ya alama ni " + jumla
+onyesha "Wastani ni " + (jumla / idadi(alama))
+`,
+  },
+  {
+    id: 'pembetatu',
+    jina: 'Pembetatu',
+    maelezo: 'Vitanzi vilivyofumbatana',
+    chanzo: `# Pembetatu ya nyota — vitanzi vilivyoingiana (nested loops).
+# Kila safu ina nyota zaidi kuliko iliyotangulia.
+kwa kila safu kutoka 1 hadi 5
+    weka mstari kuwa ""
+    kwa kila nyota kutoka 1 hadi safu
+        mstari = mstari + "*"
+    mwisho
+    onyesha mstari
+mwisho
+`,
+  },
+  {
+    id: 'kikokotoo',
+    jina: 'Kikokotoo',
+    maelezo: 'Kazi za hesabu',
+    chanzo: `# Kikokotoo kidogo — kazi za jumlisha, toa, zidisha, na gawanya.
+kazi jumlisha(x, y)
+    rudisha x + y
+mwisho
+
+kazi toa(x, y)
+    rudisha x - y
+mwisho
+
+kazi zidisha(x, y)
+    rudisha x * y
+mwisho
+
+kazi gawanya(x, y)
+    rudisha x / y
+mwisho
+
+onyesha "8 + 5 = " + jumlisha(8, 5)
+onyesha "8 - 5 = " + toa(8, 5)
+onyesha "8 * 5 = " + zidisha(8, 5)
+onyesha "8 / 4 = " + gawanya(8, 4)
 `,
   },
 ];
@@ -125,6 +213,14 @@ export function App() {
     }
   }
 
+  function nadhifu() {
+    try {
+      setCode(formatSnil(code));
+    } catch {
+      // formatSnil haifai kushindwa; tunajilinda ili UI isianguke.
+    }
+  }
+
   function pakiaMfano(id: string) {
     const m = MIFANO.find((x) => x.id === id);
     if (!m) return;
@@ -150,6 +246,9 @@ export function App() {
         <div className="snil-actions">
           <button className="btn btn-run" onClick={endesha}>
             ▶ Endesha
+          </button>
+          <button className="btn btn-ghost" onClick={nadhifu}>
+            Nadhifu
           </button>
           <button className="btn btn-ghost" onClick={onyeshaPython}>
             Onyesha Python

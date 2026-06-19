@@ -4,6 +4,7 @@ import { tokenize } from './lexer';
 import { parse as parseTokens } from './parser';
 import { interpret } from './interpreter';
 import { generatePython } from './codegen_python';
+import { generateJS } from './codegen_js';
 import { SnilError } from './errors';
 import type { Program } from './ast';
 import type { SnilIO, RunResult, ModuleResolver } from './runtime';
@@ -41,4 +42,9 @@ export function run(source: string, io: Partial<SnilIO> = {}): RunResult {
 /** Source → equivalent Python (first compilation target). Throws SnilError on syntax errors. */
 export function toPython(source: string, somaModuli?: ModuleResolver): string {
   return generatePython(parse(source), somaModuli);
+}
+
+/** Source → equivalent JavaScript (ES2020, runnable via `node`). Throws SnilError on syntax errors. */
+export function toJS(source: string, somaModuli?: ModuleResolver): string {
+  return generateJS(parse(source), somaModuli);
 }

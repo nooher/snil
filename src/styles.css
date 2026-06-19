@@ -1018,3 +1018,36 @@ body {
   .snil-actions { width: 100%; }
   .snil-actions .btn { flex: 1; }
 }
+
+/* ---------- ErrorBoundary fallback ---------- */
+.snil-boundary {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--sand);
+}
+.snil-boundary-card {
+  max-width: 420px;
+  width: 100%;
+  text-align: center;
+  background: var(--sand-soft);
+  border: 1px solid var(--sand-line);
+  border-radius: var(--radius);
+  padding: 32px 28px;
+}
+.snil-boundary-card .snil-mark {
+  margin: 0 auto 18px;
+  width: 40px;
+  height: 40px;
+}
+.snil-boundary-card h1 {
+  margin: 0 0 8px;
+  font-size: 20px;
+  color: var(--charcoal);
+}
+.snil-boundary-card p {
+  margin: 0 0 20px;
+  color: var(--ink-soft);
+}

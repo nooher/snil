@@ -2,7 +2,7 @@
 // Kiswahili: edit, press Endesha, see output. Consumes only the public API from
 // src/lang (parse/run/toPython); never reimplements the language.
 import { useEffect, useMemo, useState } from 'react';
-import { run, toPython } from './lang';
+import { run, toPython, toJS } from './lang';
 import type { SnilError } from './lang';
 import { formatError } from './lang/diagnose';
 import { formatSnil } from './lang/format';
@@ -183,7 +183,7 @@ const MANENO_MSINGI: { neno: string; maana: string }[] = [
   { neno: 'mwisho', maana: 'funga block' },
 ];
 
-type Kichupo = 'matokeo' | 'python';
+type Kichupo = 'matokeo' | 'python' | 'js';
 
 // --- Workspace ya faili nyingi (multi-file) ---
 type Faili = { name: string; code: string };
@@ -277,6 +277,8 @@ function Playground() {
   const [kosa, setKosa] = useState<SnilError | null>(null);
   const [python, setPython] = useState<string>('');
   const [pythonKosa, setPythonKosa] = useState<string>('');
+  const [js, setJs] = useState<string>('');
+  const [jsKosa, setJsKosa] = useState<string>('');
   const [kichupo, setKichupo] = useState<Kichupo>('matokeo');
   const [imeendeshwa, setImeendeshwa] = useState<boolean>(false);
 
@@ -340,6 +342,17 @@ function Playground() {
     }
   }
 
+  function onyeshaJS() {
+    setKichupo('js');
+    try {
+      setJs(toJS(code, somaModuli));
+      setJsKosa('');
+    } catch (e) {
+      setJs('');
+      setJsKosa(asSnilError(e).toString());
+    }
+  }
+
   function nadhifu() {
     try {
       setCode(formatSnil(code));
@@ -353,6 +366,8 @@ function Playground() {
     setKosa(null);
     setPython('');
     setPythonKosa('');
+    setJs('');
+    setJsKosa('');
     setImeendeshwa(false);
   }
 
@@ -418,6 +433,9 @@ function Playground() {
           </button>
           <button className="btn btn-ghost" onClick={onyeshaPython}>
             Onyesha Python
+          </button>
+          <button className="btn btn-ghost" onClick={onyeshaJS}>
+            Onyesha JS
           </button>
         </div>
       </header>
@@ -549,6 +567,12 @@ function Playground() {
               >
                 Python
               </button>
+              <button
+                className={'kichupo' + (kichupo === 'js' ? ' hai' : '')}
+                onClick={() => setKichupo('js')}
+              >
+                JavaScript
+              </button>
             </div>
 
             {kichupo === 'matokeo' ? (
@@ -565,7 +589,7 @@ function Playground() {
                   </p>
                 )}
               </div>
-            ) : (
+            ) : kichupo === 'python' ? (
               <div className="paneli-eneo">
                 {pythonKosa ? (
                   <pre className="kosa">{pythonKosa}</pre>
@@ -574,6 +598,18 @@ function Playground() {
                 ) : (
                   <p className="tupu">
                     Bonyeza “Onyesha Python” kuona SNIL ikitafsiriwa Python.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="paneli-eneo">
+                {jsKosa ? (
+                  <pre className="kosa">{jsKosa}</pre>
+                ) : js ? (
+                  <pre className="python">{js}</pre>
+                ) : (
+                  <p className="tupu">
+                    Bonyeza “Onyesha JS” kuona SNIL ikitafsiriwa JavaScript.
                   </p>
                 )}
               </div>

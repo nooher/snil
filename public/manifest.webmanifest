@@ -1,0 +1,28 @@
+{
+  "name": "SNIL — Lugha ya Kompyuta ya Kiswahili",
+  "short_name": "SNIL",
+  "description": "SNIL (Swahili Native Intent Language) — andika programu kwa Kiswahili. Na Laetoli.",
+  "lang": "sw",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#1f5135",
+  "theme_color": "#1f5135",
+  "categories": ["education", "developer", "productivity"],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

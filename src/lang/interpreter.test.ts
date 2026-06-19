@@ -204,3 +204,115 @@ describe('semantics', () => {
     expect(r2.output).toBe('Habari Asha');
   });
 });
+
+describe('module imports (leta "faili")', () => {
+  /** Build an in-memory resolver from a name → source map. */
+  function resolver(modules: Record<string, string>): SnilIO['somaModuli'] {
+    return (name) => (name in modules ? modules[name] : null);
+  }
+
+  it('imports a top-level kazi and calls it by bare name', () => {
+    const modules = {
+      salamu: ['kazi karibisha(jina)', '    rudisha "Karibu " + jina', 'mwisho'].join('\n'),
+    };
+    const main = ['leta "salamu"', 'onyesha karibisha("Asha")'].join('\n');
+    const r = run(main, { somaModuli: resolver(modules) });
+    expect(r.error).toBeNull();
+    expect(r.output).toBe('Karibu Asha');
+  });
+
+  it('imports a top-level weka variable by bare name', () => {
+    const modules = { data: 'weka jina_la_app kuwa "SNIL"' };
+    const main = ['leta "data"', 'onyesha jina_la_app'].join('\n');
+    const r = run(main, { somaModuli: resolver(modules) });
+    expect(r.error).toBeNull();
+    expect(r.output).toBe('SNIL');
+  });
+
+  it('a module function closes over its own module scope', () => {
+    const modules = {
+      hesabu: [
+        'weka msingi kuwa 100',
+        'kazi ongezea(x)',
+        '    rudisha x + msingi',
+        'mwisho',
+      ].join('\n'),
+    };
+    const main = ['leta "hesabu"', 'onyesha ongezea(5)'].join('\n');
+    const r = run(main, { somaModuli: resolver(modules) });
+    expect(r.error).toBeNull();
+    expect(r.output).toBe('105');
+  });
+
+  it('a module can transitively import another module', () => {
+    const modules = {
+      msingi: ['kazi salimu(jina)', '    rudisha "Hujambo " + jina', 'mwisho'].join('\n'),
+      mbele: [
+        'leta "msingi"',
+        'kazi karibisha(jina)',
+        '    rudisha salimu(jina) + "!"',
+        'mwisho',
+      ].join('\n'),
+    };
+    const main = ['leta "mbele"', 'onyesha karibisha("Asha")'].join('\n');
+    const r = run(main, { somaModuli: resolver(modules) });
+    expect(r.error).toBeNull();
+    expect(r.output).toBe('Hujambo Asha!');
+  });
+
+  it('a module imported twice runs only once (cached side effects)', () => {
+    const modules = {
+      mara: ['onyesha "imeleta"', 'weka thamani kuwa 7'].join('\n'),
+    };
+    const main = ['leta "mara"', 'leta "mara"', 'onyesha thamani'].join('\n');
+    const r = run(main, { somaModuli: resolver(modules) });
+    expect(r.error).toBeNull();
+    // Body runs once → one "imeleta", then the cached binding is re-exposed.
+    expect(r.output).toBe('imeleta\n7');
+  });
+
+  it('missing module → Kiswahili SnilError with a line', () => {
+    const main = 'leta "haipo"\nonyesha 1';
+    const r = run(main, { somaModuli: resolver({}) });
+    expect(r.error).not.toBeNull();
+    expect(r.error?.ujumbe).toContain('haijapatikana');
+    expect(r.error?.line).toBe(1);
+  });
+
+  it('no resolver at all → Kiswahili SnilError', () => {
+    const r = run('leta "salamu"\nonyesha 1');
+    expect(r.error).not.toBeNull();
+    expect(r.error?.ujumbe).toContain('haijapatikana');
+  });
+
+  it('a 2-module import cycle → Kiswahili error, no infinite loop', () => {
+    const modules = {
+      a: ['leta "b"', 'weka x kuwa 1'].join('\n'),
+      b: ['leta "a"', 'weka y kuwa 2'].join('\n'),
+    };
+    const r = run('leta "a"\nonyesha 1', { somaModuli: resolver(modules) });
+    expect(r.error).not.toBeNull();
+    expect(r.error?.ujumbe).toContain('Mzunguko wa kuagiza moduli');
+  });
+
+  it('a file module may itself use stdlib', () => {
+    const modules = {
+      math: [
+        'leta hisabati',
+        'kazi jumlisha(orodha)',
+        '    rudisha jumla(orodha)',
+        'mwisho',
+      ].join('\n'),
+    };
+    const main = ['leta "math"', 'onyesha jumlisha([1, 2, 3])'].join('\n');
+    const r = run(main, { somaModuli: resolver(modules) });
+    expect(r.error).toBeNull();
+    expect(r.output).toBe('6');
+  });
+
+  it('regression: stdlib leta hisabati still works alongside module support', () => {
+    const r = run('leta hisabati\nonyesha jumla([1, 2, 3, 4])');
+    expect(r.error).toBeNull();
+    expect(r.output).toBe('10');
+  });
+});

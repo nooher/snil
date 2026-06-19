@@ -12,6 +12,8 @@ import type {
 import type { SnilIO } from './runtime';
 import { SnilError, Makosa } from './errors';
 import { STDLIB, BUILTINS, type NativeFn } from './stdlib';
+import { tokenize } from './lexer';
+import { parse } from './parser';
 
 // ───────────────────────── Runtime values ─────────────────────────
 // SNIL values map onto JS: number, string, boolean, null (tupu), array (orodha),
@@ -72,6 +74,11 @@ class Environment {
 
   private hasOwn(name: string): boolean { return this.vars.has(name); }
   private set(name: string, value: SnilValue): void { this.vars.set(name, value); }
+
+  /** Snapshot of this scope's OWN bindings — a module's top-level kazi + weka. */
+  exportTopLevel(): Map<string, SnilValue> {
+    return new Map(this.vars);
+  }
 }
 
 // Internal control-flow signal used to unwind `rudisha`.
@@ -86,13 +93,52 @@ export function interpret(program: Program, io: SnilIO): void {
   const builtins = new Map<string, NativeFn>();
   for (const [name, fn] of Object.entries(BUILTINS)) builtins.set(name, fn);
 
-  const ctx: Ctx = { io, builtins };
+  const ctx: Ctx = {
+    io,
+    builtins,
+    moduleCache: new Map(),
+    loadingModules: new Set(),
+  };
   execBlock(program.body, global, ctx);
 }
 
 interface Ctx {
   io: SnilIO;
   builtins: Map<string, NativeFn>;
+  /** Loaded file modules by name → their top-level exported bindings (kazi + weka). */
+  moduleCache: Map<string, Map<string, SnilValue>>;
+  /** Names of modules currently being loaded — used to detect import cycles. */
+  loadingModules: Set<string>;
+}
+
+/** Load a file module ONCE: parse, run its body in a fresh scope, return the
+ *  top-level `kazi` + `weka` bindings. Cached; guards against import cycles. */
+function loadModule(name: string, line: number, ctx: Ctx): Map<string, SnilValue> {
+  const cached = ctx.moduleCache.get(name);
+  if (cached) return cached;
+
+  if (ctx.loadingModules.has(name)) {
+    throw new SnilError(`Mzunguko wa kuagiza moduli: ${name}`, line, 'kutekeleza');
+  }
+
+  const source = ctx.io.somaModuli?.(name);
+  if (source == null) {
+    throw new SnilError(`Moduli "${name}" haijapatikana.`, line, 'kutekeleza');
+  }
+
+  ctx.loadingModules.add(name);
+  try {
+    const program = parse(tokenize(source));
+    // Fresh module scope: functions close over THIS environment, so a module
+    // function can call sibling module functions / read module-level `weka`.
+    const moduleEnv = new Environment();
+    execBlock(program.body, moduleEnv, ctx);
+    const exports = moduleEnv.exportTopLevel();
+    ctx.moduleCache.set(name, exports);
+    return exports;
+  } finally {
+    ctx.loadingModules.delete(name);
+  }
 }
 
 // ───────────────────────── Statements ─────────────────────────
@@ -196,13 +242,20 @@ function exec(stmt: Stmt, env: Environment, ctx: Ctx): void {
       return;
     }
     case 'Import': {
-      const mod = STDLIB[stmt.module];
-      if (!mod) {
-        throw new SnilError(`Moduli "${stmt.module}" haipatikani.`, stmt.line, 'kutekeleza',
-          'moduli zinazopatikana: hisabati, maandishi, muda, faili');
+      if (!stmt.isFile) {
+        // Stdlib: `leta hisabati` copies the module's functions into the flat namespace.
+        const mod = STDLIB[stmt.module];
+        if (!mod) {
+          throw new SnilError(`Moduli "${stmt.module}" haipatikani.`, stmt.line, 'kutekeleza',
+            'moduli zinazopatikana: hisabati, maandishi, muda, faili');
+        }
+        for (const [name, fn] of Object.entries(mod)) ctx.builtins.set(name, fn);
+        return;
       }
-      // `leta X` copies the module's functions into the flat builtin namespace.
-      for (const [name, fn] of Object.entries(mod)) ctx.builtins.set(name, fn);
+      // File module: `leta "salamu"` loads (once) and exposes its top-level
+      // kazi + weka into the CURRENT scope as bare names.
+      const exports = loadModule(stmt.module, stmt.line, ctx);
+      for (const [name, value] of exports) env.declare(name, value);
       return;
     }
     case 'ListAdd': {

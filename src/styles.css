@@ -196,6 +196,83 @@ body {
   border-bottom: 1px solid #3a3528;
 }
 
+/* ---------- Faili tab bar (multi-file workspace) ---------- */
+.faili-bar {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  padding: 6px 8px 0;
+  background: #2c281f;
+  border-bottom: 1px solid #3a3528;
+  overflow-x: auto;
+}
+.faili-tab {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 4px 0 10px;
+  border-radius: 8px 8px 0 0;
+  background: #211e18;
+  border: 1px solid #3a3528;
+  border-bottom: none;
+  flex: 0 0 auto;
+}
+.faili-tab.hai {
+  background: var(--code-bg);
+  border-color: var(--gold);
+}
+.faili-jina {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: #b9ad93;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 8px 4px;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.faili-tab.hai .faili-jina { color: var(--code-ink); }
+.faili-jina-hariri {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--code-ink);
+  background: #1d1a14;
+  border: 1px solid var(--gold);
+  border-radius: 5px;
+  padding: 6px 6px;
+  width: 130px;
+  outline: none;
+}
+.faili-ic {
+  font-size: 11px;
+  line-height: 1;
+  color: #8c8369;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 6px 5px;
+  border-radius: 5px;
+}
+.faili-ic:hover { color: var(--code-ink); background: rgba(243, 235, 220, 0.1); }
+.faili-futa:hover { color: var(--red); }
+.faili-ongeza {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--gold);
+  background: transparent;
+  border: 1px dashed #4a4534;
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 7px 12px;
+  margin: 2px 0 4px 2px;
+  flex: 0 0 auto;
+  align-self: center;
+}
+.faili-ongeza:hover { background: rgba(201, 150, 47, 0.12); border-color: var(--gold); }
+
 .mhariri-eneo {
   flex: 1;
   display: flex;

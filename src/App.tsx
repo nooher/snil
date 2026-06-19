@@ -1,7 +1,7 @@
 // App.tsx — SNIL Playground. The friendliest way to write your first program in
 // Kiswahili: edit, press Endesha, see output. Consumes only the public API from
 // src/lang (parse/run/toPython); never reimplements the language.
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { run, toPython } from './lang';
 import type { SnilError } from './lang';
 import { formatError } from './lang/diagnose';
@@ -185,6 +185,54 @@ const MANENO_MSINGI: { neno: string; maana: string }[] = [
 
 type Kichupo = 'matokeo' | 'python';
 
+// --- Workspace ya faili nyingi (multi-file) ---
+type Faili = { name: string; code: string };
+const HIFADHI_KEY = 'snil:workspace';
+
+// main.snil ya awali — inaonyesha `leta` ikileta moduli `salamu`.
+const MAIN_AWALI = `# Karibu SNIL! Hii ni faili kuu (main.snil).
+# Tunaleta moduli "salamu" kisha tunatumia kazi yake.
+leta "salamu"
+
+onyesha karibisha("Asha")
+onyesha karibisha("Juma")
+`;
+
+const SALAMU_AWALI = `# salamu.snil — moduli ndogo. Faili nyingine zinaweza kuileta kwa: leta "salamu"
+kazi karibisha(jina)
+    rudisha "Karibu " + jina
+mwisho
+`;
+
+function failiAwali(): Faili[] {
+  return [
+    { name: 'main.snil', code: MAIN_AWALI },
+    { name: 'salamu.snil', code: SALAMU_AWALI },
+  ];
+}
+
+// Pakua workspace kutoka localStorage; rudisha awali ikiwa haipo / imeharibika.
+function pakuaWorkspace(): Faili[] {
+  try {
+    const raw = localStorage.getItem(HIFADHI_KEY);
+    if (!raw) return failiAwali();
+    const data = JSON.parse(raw);
+    if (
+      Array.isArray(data) &&
+      data.length > 0 &&
+      data.every(
+        (f) =>
+          f && typeof f.name === 'string' && typeof f.code === 'string',
+      )
+    ) {
+      return data as Faili[];
+    }
+  } catch {
+    // hifadhi imeharibika — tunarudi kwenye awali kwa usalama
+  }
+  return failiAwali();
+}
+
 export function App() {
   const [modi, setModi] = useState<Modi>('karibu');
   return (
@@ -221,10 +269,10 @@ export function App() {
 }
 
 function Playground() {
-  const [code, setCode] = useState<string>(
-    MIFANO.find((m) => m.id === 'hesabu')!.chanzo,
-  );
-  const [hai, setHai] = useState<string>('hesabu'); // mfano ulio hai
+  const [faili, setFaili] = useState<Faili[]>(pakuaWorkspace);
+  const [haiFaili, setHaiFaili] = useState<number>(0);
+  const [hariri, setHariri] = useState<number | null>(null); // index inayohaririwa jina
+  const [hai, setHai] = useState<string>(''); // mfano ulio hai (sidebar)
   const [output, setOutput] = useState<string>('');
   const [kosa, setKosa] = useState<SnilError | null>(null);
   const [python, setPython] = useState<string>('');
@@ -232,14 +280,46 @@ function Playground() {
   const [kichupo, setKichupo] = useState<Kichupo>('matokeo');
   const [imeendeshwa, setImeendeshwa] = useState<boolean>(false);
 
+  // Faili iliyo hai sasa (kinga: kama index imepita mpaka, rudi 0).
+  const idx = haiFaili < faili.length ? haiFaili : 0;
+  const code = faili[idx]?.code ?? '';
+
+  // Hifadhi workspace kila inapobadilika.
+  useEffect(() => {
+    try {
+      localStorage.setItem(HIFADHI_KEY, JSON.stringify(faili));
+    } catch {
+      // hifadhi imejaa / haipatikani — tunaendelea bila kuvunja UI
+    }
+  }, [faili]);
+
   // Idadi ya mistari kwa gutter ya mhariri.
   const mistari = useMemo(() => code.split('\n').length, [code]);
+
+  // Resolver: leta "salamu" → tafuta faili "salamu" au "salamu.snil".
+  const somaModuli = useMemo(() => {
+    return (name: string): string | null => {
+      const f =
+        faili.find((x) => x.name === name) ??
+        faili.find((x) => x.name === name + '.snil');
+      return f ? f.code : null;
+    };
+  }, [faili]);
+
+  function setCode(mpya: string) {
+    setFaili((prev) =>
+      prev.map((f, i) => (i === idx ? { ...f, code: mpya } : f)),
+    );
+  }
 
   function endesha() {
     setKichupo('matokeo');
     setImeendeshwa(true);
     try {
-      const res = run(code, { uliza: (swali) => window.prompt(swali) ?? '' });
+      const res = run(code, {
+        uliza: (swali) => window.prompt(swali) ?? '',
+        somaModuli,
+      });
       setOutput(res.output);
       setKosa(res.error);
     } catch (e) {
@@ -252,7 +332,7 @@ function Playground() {
   function onyeshaPython() {
     setKichupo('python');
     try {
-      setPython(toPython(code));
+      setPython(toPython(code, somaModuli));
       setPythonKosa('');
     } catch (e) {
       setPython('');
@@ -268,16 +348,55 @@ function Playground() {
     }
   }
 
-  function pakiaMfano(id: string) {
-    const m = MIFANO.find((x) => x.id === id);
-    if (!m) return;
-    setCode(m.chanzo);
-    setHai(id);
+  function safishaMatokeo() {
     setOutput('');
     setKosa(null);
     setPython('');
     setPythonKosa('');
     setImeendeshwa(false);
+  }
+
+  function ongezaFaili() {
+    const jina = (window.prompt('Jina la faili?', '.snil') ?? '').trim();
+    if (!jina) return;
+    if (faili.some((f) => f.name === jina)) {
+      window.alert('Faili lenye jina hilo lipo tayari.');
+      return;
+    }
+    setFaili((prev) => [...prev, { name: jina, code: '' }]);
+    setHaiFaili(faili.length);
+    safishaMatokeo();
+  }
+
+  function badiliJina(i: number, jina: string) {
+    const mpya = jina.trim();
+    setHariri(null);
+    if (!mpya || mpya === faili[i].name) return;
+    if (faili.some((f, j) => j !== i && f.name === mpya)) {
+      window.alert('Faili lenye jina hilo lipo tayari.');
+      return;
+    }
+    setFaili((prev) => prev.map((f, j) => (j === i ? { ...f, name: mpya } : f)));
+  }
+
+  function futaFaili(i: number) {
+    if (faili.length <= 1) return; // weka angalau faili moja
+    if (!window.confirm(`Futa "${faili[i].name}"?`)) return;
+    setFaili((prev) => prev.filter((_, j) => j !== i));
+    setHaiFaili((cur) => {
+      const next = cur > i ? cur - 1 : cur;
+      return next >= faili.length - 1 ? Math.max(0, faili.length - 2) : next;
+    });
+    safishaMatokeo();
+  }
+
+  function pakiaMfano(id: string) {
+    const m = MIFANO.find((x) => x.id === id);
+    if (!m) return;
+    // Pakia mfano kwenye faili iliyo hai.
+    setCode(m.chanzo);
+    setHai(id);
+    safishaMatokeo();
   }
 
   return (
@@ -337,7 +456,69 @@ function Playground() {
 
         <main className="snil-main">
           <section className="mhariri">
-            <div className="mhariri-kichwa">andika.snil</div>
+            <div className="faili-bar" role="tablist" aria-label="Faili">
+              {faili.map((f, i) => (
+                <div
+                  key={i}
+                  className={'faili-tab' + (i === idx ? ' hai' : '')}
+                >
+                  {hariri === i ? (
+                    <input
+                      className="faili-jina-hariri"
+                      defaultValue={f.name}
+                      autoFocus
+                      spellCheck={false}
+                      onBlur={(e) => badiliJina(i, e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') e.currentTarget.blur();
+                        if (e.key === 'Escape') setHariri(null);
+                      }}
+                    />
+                  ) : (
+                    <button
+                      className="faili-jina"
+                      role="tab"
+                      aria-selected={i === idx}
+                      onClick={() => {
+                        setHaiFaili(i);
+                        safishaMatokeo();
+                      }}
+                      onDoubleClick={() => setHariri(i)}
+                      title={f.name}
+                    >
+                      {f.name}
+                    </button>
+                  )}
+                  {hariri !== i && (
+                    <button
+                      className="faili-ic"
+                      title="Badili jina"
+                      aria-label={'Badili jina la ' + f.name}
+                      onClick={() => setHariri(i)}
+                    >
+                      ✎
+                    </button>
+                  )}
+                  {faili.length > 1 && hariri !== i && (
+                    <button
+                      className="faili-ic faili-futa"
+                      title="Futa faili"
+                      aria-label={'Futa ' + f.name}
+                      onClick={() => futaFaili(i)}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                className="faili-ongeza"
+                onClick={ongezaFaili}
+                title="Ongeza faili jipya"
+              >
+                + Faili
+              </button>
+            </div>
             <div className="mhariri-eneo">
               <div className="gutter" aria-hidden="true">
                 {Array.from({ length: mistari }, (_, i) => (

@@ -6,13 +6,13 @@ import { interpret } from './interpreter';
 import { generatePython } from './codegen_python';
 import { SnilError } from './errors';
 import type { Program } from './ast';
-import type { SnilIO, RunResult } from './runtime';
+import type { SnilIO, RunResult, ModuleResolver } from './runtime';
 
 export { tokenize } from './lexer';
 export { SnilError } from './errors';
 export type { Token } from './tokens';
 export type { Program } from './ast';
-export type { SnilIO, RunResult } from './runtime';
+export type { SnilIO, RunResult, ModuleResolver } from './runtime';
 
 /** Source → AST (tokenize + parse). Throws SnilError on lexical/syntax errors. */
 export function parse(source: string): Program {
@@ -27,6 +27,7 @@ export function run(source: string, io: Partial<SnilIO> = {}): RunResult {
     uliza: io.uliza ?? (() => ''),
     somaFaili: io.somaFaili,
     andikaFaili: io.andikaFaili,
+    somaModuli: io.somaModuli,
   };
   try {
     interpret(parse(source), fullIO);
@@ -38,6 +39,6 @@ export function run(source: string, io: Partial<SnilIO> = {}): RunResult {
 }
 
 /** Source → equivalent Python (first compilation target). Throws SnilError on syntax errors. */
-export function toPython(source: string): string {
-  return generatePython(parse(source));
+export function toPython(source: string, somaModuli?: ModuleResolver): string {
+  return generatePython(parse(source), somaModuli);
 }

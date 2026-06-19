@@ -9,6 +9,9 @@ import type {
   Binary, Unary, Call, Index, Member, Ident,
 } from './ast';
 import { STDLIB } from './stdlib';
+import { SnilError } from './errors';
+import { tokenize } from './lexer';
+import { parse as parseTokens } from './parser';
 
 // ───────────────────────── Runtime prelude ─────────────────────────
 // Emitted at the top of every output so Python display matches SNIL EXACTLY:
@@ -164,7 +167,7 @@ function safeName(name: string): string {
   return name;
 }
 
-export function generatePython(program: Program): string {
+export function generatePython(program: Program, somaModuli?: import('./runtime').ModuleResolver): string {
   const out: string[] = [];
 
   function line(text: string, depth: number): void {
@@ -251,10 +254,17 @@ export function generatePython(program: Program): string {
         return;
       }
       case 'Import': {
-        // `leta X` flattens the module's functions into bare names — matching the
-        // interpreter (so `jumla(...)` works after `leta hisabati`). Module objects
-        // live in the prelude.
         const n = s as Import;
+        if (n.isFile) {
+          // File module: its compiled statements are inlined ONCE at top level
+          // (see gatherFileModules below), so the import site itself emits nothing.
+          // Bare names (kazi/weka) are already global Python names by this point.
+          line(`# leta "${n.module}"`, depth);
+          return;
+        }
+        // `leta X` flattens the stdlib module's functions into bare names — matching
+        // the interpreter (so `jumla(...)` works after `leta hisabati`). Module
+        // objects live in the prelude.
         const mod = STDLIB[n.module];
         if (mod) {
           for (const fn of Object.keys(mod)) line(`${safeName(fn)} = ${n.module}.${fn}`, depth);
@@ -388,7 +398,58 @@ export function generatePython(program: Program): string {
     return `${safeName(e.callee)}(${args})`;
   }
 
+  // ── gather transitively-imported file modules ──
+  // DFS from main, DEDUPED by module name, CYCLE-SAFE (don't recurse into a module
+  // that is already on the visiting stack), emitted in dependency order
+  // (imported-before-importer). Each module body is compiled exactly ONCE so its
+  // top-level kazi/weka become global Python names — exactly the bare-name exposure
+  // the interpreter produces.
+  function fileImportsOf(body: Stmt[]): Import[] {
+    const found: Import[] = [];
+    for (const s of body) {
+      if (s.kind === 'Import' && (s as Import).isFile) found.push(s as Import);
+    }
+    return found;
+  }
+
+  const moduleOrder: { name: string; body: Stmt[] }[] = [];
+  const emitted = new Set<string>();   // dedup: a module is inlined at most once
+  const visiting = new Set<string>();  // cycle guard: modules on the current DFS path
+
+  function visitModule(imp: Import): void {
+    const name = imp.module;
+    if (emitted.has(name)) return;     // already inlined elsewhere
+    if (visiting.has(name)) return;    // cycle — already being processed up-stack
+    if (!somaModuli) {
+      throw new SnilError(
+        `Moduli "${name}" haijapatikana.`, imp.line, 'kutekeleza',
+        'mazingira haya hayana kisuluhishi cha moduli (somaModuli)',
+      );
+    }
+    const source = somaModuli(name);
+    if (source == null) {
+      throw new SnilError(`Moduli "${name}" haijapatikana.`, imp.line, 'kutekeleza');
+    }
+    const modProgram = parseTokens(tokenize(source));
+    visiting.add(name);
+    // Dependencies first (so imported modules are inlined before this one).
+    for (const dep of fileImportsOf(modProgram.body)) visitModule(dep);
+    visiting.delete(name);
+    if (!emitted.has(name)) {
+      emitted.add(name);
+      moduleOrder.push({ name, body: modProgram.body });
+    }
+  }
+
+  for (const imp of fileImportsOf(program.body)) visitModule(imp);
+
   // ── assemble ──
+  // 1) inlined file-modules (dependency order), each emitted ONCE at top level.
+  for (const mod of moduleOrder) {
+    out.push(`# ── moduli "${mod.name}" (imeingizwa moja kwa moja) ──`);
+    for (const s of mod.body) emitStmt(s, 0);
+  }
+  // 2) the main program body.
   for (const s of program.body) emitStmt(s, 0);
 
   return PRELUDE + '\n' + (out.length ? out.join('\n') + '\n' : '');

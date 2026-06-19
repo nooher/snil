@@ -9,6 +9,8 @@ import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { toPython } from './index';
+import type { ModuleResolver } from './runtime';
+import { SnilError } from './errors';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const examplesDir = join(here, '..', '..', 'examples');
@@ -38,8 +40,8 @@ function pythonAvailable(): boolean {
 }
 
 /** Compile SNIL → Python, write to a temp file, run it, return trimmed stdout. */
-function runPython(source: string): string {
-  const py = toPython(source);
+function runPython(source: string, somaModuli?: ModuleResolver): string {
+  const py = toPython(source, somaModuli);
   const dir = mkdtempSync(join(tmpdir(), 'snil-'));
   const file = join(dir, 'prog.py');
   writeFileSync(file, py, 'utf-8');
@@ -118,5 +120,85 @@ describe('SNIL → Python semantics (generated source)', () => {
     if (HAVE_PY) {
       expect(runPython('weka m kuwa { jina: "Ali" }\nm.jina = "Asha"\nonyesha m.jina')).toBe('Asha');
     }
+  });
+});
+
+describe('SNIL → Python file-module imports (leta "x", inlined + executed)', () => {
+  /** Build a ModuleResolver from a name→SNIL-source map. */
+  const resolver = (mods: Record<string, string>): ModuleResolver =>
+    (name) => (name in mods ? mods[name] : null);
+
+  it('leta "salamu" inlines a kazi and calls it (Karibu Asha)', () => {
+    const mods = {
+      salamu: 'kazi karibisha(jina)\n    rudisha "Karibu " + jina\nmwisho',
+    };
+    const main = 'leta "salamu"\nonyesha karibisha("Asha")';
+    const py = toPython(main, resolver(mods));
+    expect(py).toContain('def karibisha(jina):');
+    if (HAVE_PY) expect(runPython(main, resolver(mods))).toBe('Karibu Asha');
+  });
+
+  it('leta "data" inlines a top-level weka (SNIL)', () => {
+    const mods = { data: 'weka jina_la_app kuwa "SNIL"' };
+    const main = 'leta "data"\nonyesha jina_la_app';
+    if (HAVE_PY) expect(runPython(main, resolver(mods))).toBe('SNIL');
+  });
+
+  it('transitive imports (module imports module) run correctly', () => {
+    const mods = {
+      msingi: 'kazi nukta()\n    rudisha "."\nmwisho',
+      salamu: 'leta "msingi"\nkazi karibisha(jina)\n    rudisha "Karibu " + jina + nukta()\nmwisho',
+    };
+    const main = 'leta "salamu"\nonyesha karibisha("Asha")';
+    if (HAVE_PY) expect(runPython(main, resolver(mods))).toBe('Karibu Asha.');
+  });
+
+  it('a module imported by two modules is inlined ONLY ONCE', () => {
+    const mods = {
+      shared: 'kazi pamoja()\n    rudisha "+"\nmwisho',
+      a: 'leta "shared"\nkazi fromA()\n    rudisha "A" + pamoja()\nmwisho',
+      b: 'leta "shared"\nkazi fromB()\n    rudisha "B" + pamoja()\nmwisho',
+    };
+    const main = 'leta "a"\nleta "b"\nonyesha fromA() + fromB()';
+    const py = toPython(main, resolver(mods));
+    // "shared" emitted exactly once → exactly one definition of pamoja.
+    const defs = py.match(/def pamoja\(\):/g) ?? [];
+    expect(defs.length).toBe(1);
+    // And it runs (no Python duplicate-def crash, correct output).
+    if (HAVE_PY) expect(runPython(main, resolver(mods))).toBe('A+B+');
+  });
+
+  it('import cycle is safe (does not infinite-loop, compiles + runs)', () => {
+    const mods = {
+      x: 'leta "y"\nkazi fromX()\n    rudisha "X"\nmwisho',
+      y: 'leta "x"\nkazi fromY()\n    rudisha "Y"\nmwisho',
+    };
+    const main = 'leta "x"\nonyesha fromX() + fromY()';
+    const py = toPython(main, resolver(mods));
+    expect(py).toContain('def fromX():');
+    expect(py).toContain('def fromY():');
+    if (HAVE_PY) expect(runPython(main, resolver(mods))).toBe('XY');
+  });
+
+  it('missing module throws a Kiswahili SnilError', () => {
+    const main = 'leta "haipo"\nonyesha 1';
+    expect(() => toPython(main, resolver({}))).toThrow(SnilError);
+    try {
+      toPython(main, resolver({}));
+    } catch (e) {
+      expect((e as SnilError).ujumbe).toContain('Moduli');
+      expect((e as SnilError).ujumbe).toContain('haipo');
+    }
+  });
+
+  it('file import with NO resolver throws a Kiswahili SnilError', () => {
+    expect(() => toPython('leta "salamu"\nonyesha 1')).toThrow(SnilError);
+  });
+
+  it('stdlib leta hisabati still compiles + runs (regression)', () => {
+    const src = 'leta hisabati\nonyesha jumla([1, 2, 3])';
+    const py = toPython(src);
+    expect(py).toContain('jumla = hisabati.jumla');
+    if (HAVE_PY) expect(runPython(src)).toBe('6');
   });
 });

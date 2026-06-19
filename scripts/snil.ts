@@ -13,6 +13,7 @@
 // language modules load), then dynamically import the toolchain.
 import { register } from 'node:module';
 import * as fs from 'node:fs';
+import * as nodePath from 'node:path';
 import * as process from 'node:process';
 import { pathToFileURL } from 'node:url';
 
@@ -20,7 +21,7 @@ register('./ts_resolver.ts', import.meta.url);
 
 const { run, toPython, SnilError } = await import('../src/lang/index.ts');
 const { formatError } = await import('../src/lang/diagnose.ts');
-const { nodeIO } = await import('../src/lang/node_io.ts');
+const { nodeIO, fsModuleResolver } = await import('../src/lang/node_io.ts');
 const { formatSnil } = await import('../src/lang/format.ts');
 
 const TOLEO = 'SNIL 0.1';
@@ -64,7 +65,9 @@ function amriEndesha(args: string[]): void {
     process.exit(1);
   }
   const source = somaChanzo(path);
-  const result = run(source, nodeIO()); // output streams via nodeIO.andika
+  // File imports (`leta "jina"`) resolve relative to the entry file's directory.
+  const baseDir = nodePath.dirname(path);
+  const result = run(source, { ...nodeIO(), somaModuli: fsModuleResolver(baseDir) }); // output streams via nodeIO.andika
   if (result.error) {
     process.stderr.write(formatError(source, result.error) + '\n');
     process.exit(1);
@@ -94,7 +97,8 @@ function amriTengeneza(args: string[]): void {
   const source = somaChanzo(path);
   let python: string;
   try {
-    python = toPython(source);
+    // Inline file imports relative to the entry file's directory into the output.
+    python = toPython(source, fsModuleResolver(nodePath.dirname(path)));
   } catch (e) {
     const err = e instanceof SnilError
       ? e

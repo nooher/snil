@@ -188,8 +188,12 @@ export function parse(tokens: Token[]): Program {
   // leta IDENT
   function importStmt(): Import {
     const line = next().line; // leta
-    const module = expectIdent('jina la moduli baada ya "leta"');
-    return { kind: 'Import', module, line };
+    if (at(T.STRING)) {
+      const module = next().value; // leta "faili" — kuagiza moduli ya SNIL
+      return { kind: 'Import', module, isFile: true, line };
+    }
+    const module = expectIdent('jina la moduli au "faili" baada ya "leta"');
+    return { kind: 'Import', module, isFile: false, line };
   }
 
   // ongeza expr kwenye expr

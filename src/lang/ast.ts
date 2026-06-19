@@ -47,7 +47,7 @@ export interface While extends Node { kind: 'While'; cond: Expr; body: Stmt[]; }
 export interface FuncDecl extends Node { kind: 'FuncDecl'; name: string; params: string[]; body: Stmt[]; } // kazi f(a,b)..mwisho
 export interface Return extends Node { kind: 'Return'; value: Expr | null; }                  // rudisha <e>
 export interface Try extends Node { kind: 'Try'; body: Stmt[]; handler: Stmt[]; }             // jaribu..kosa..mwisho
-export interface Import extends Node { kind: 'Import'; module: string; }                      // leta hisabati
+export interface Import extends Node { kind: 'Import'; module: string; isFile: boolean; }       // leta hisabati (isFile=false) | leta "faili" (isFile=true)
 export interface ListAdd extends Node { kind: 'ListAdd'; item: Expr; list: Expr; }            // ongeza X kwenye L
 export interface ListRemove extends Node { kind: 'ListRemove'; item: Expr; list: Expr; }      // ondoa X kutoka L
 export interface FileWrite extends Node { kind: 'FileWrite'; data: Expr; path: Expr; }        // andika data kwenye "f"

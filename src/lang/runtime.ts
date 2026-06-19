@@ -12,7 +12,12 @@ export interface SnilIO {
   somaFaili?: (path: string) => string;
   /** Virtual file write for `andika ... kwenye`. */
   andikaFaili?: (path: string, data: string) => void;
+  /** Resolve `leta "jina"` → the imported module's SNIL source (null if missing). */
+  somaModuli?: ModuleResolver;
 }
+
+/** Resolves a SNIL module name → its source. Browser → in-memory workspace; CLI → filesystem. */
+export type ModuleResolver = (name: string) => string | null;
 
 export interface RunResult {
   output: string;          // everything `onyesha` produced, joined by "\n"

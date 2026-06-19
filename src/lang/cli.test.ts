@@ -9,6 +9,7 @@ import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SnilError } from './errors';
 import { formatError } from './diagnose';
+import { fsModuleResolver } from './node_io';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const CLI = path.join(ROOT, 'scripts', 'snil.ts');
@@ -81,6 +82,60 @@ describe('snil CLI', () => {
     const { stdout, code } = runCli(['msaada']);
     expect(code).toBe(0);
     expect(stdout).toContain('Matumizi');
+  });
+});
+
+describe('fsModuleResolver', () => {
+  it('resolves a sibling module by name and by name + ".snil", and returns null when missing', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'snil-resolver-'));
+    try {
+      fs.writeFileSync(path.join(dir, 'salamu.snil'), 'kazi karibisha(jina)\n', 'utf-8');
+      fs.writeFileSync(path.join(dir, 'halisi'), 'onyesha "bila kiendelezi"\n', 'utf-8');
+      const resolve = fsModuleResolver(dir);
+      expect(resolve('salamu')).toContain('kazi karibisha(jina)');
+      expect(resolve('salamu.snil')).toContain('kazi karibisha(jina)');
+      expect(resolve('halisi')).toContain('bila kiendelezi');
+      expect(resolve('hakuna')).toBeNull();
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('snil CLI file imports (leta)', () => {
+  function withProject<T>(fn: (dir: string) => T): T {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'snil-imports-'));
+    try {
+      fs.writeFileSync(
+        path.join(dir, 'main.snil'),
+        'leta "salamu"\nonyesha karibisha("Asha")\n',
+        'utf-8',
+      );
+      fs.writeFileSync(
+        path.join(dir, 'salamu.snil'),
+        'kazi karibisha(jina)\n    rudisha "Karibu " + jina\nmwisho\n',
+        'utf-8',
+      );
+      return fn(dir);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  it('endesha resolves a sibling module and prints the imported function result', () => {
+    withProject((dir) => {
+      const { stdout, code } = runCli(['endesha', path.join(dir, 'main.snil')]);
+      expect(code).toBe(0);
+      expect(stdout).toContain('Karibu Asha');
+    });
+  });
+
+  it('tengeneza inlines the imported function into generated Python', () => {
+    withProject((dir) => {
+      const { stdout, code } = runCli(['tengeneza', path.join(dir, 'main.snil')]);
+      expect(code).toBe(0);
+      expect(stdout).toContain('def karibisha');
+    });
   });
 });
 

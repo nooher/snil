@@ -204,3 +204,23 @@ Tazama `PACKAGES.md` kwa muundo wa rejista na jinsi ya kuongeza pakeji.
 ## Golden programs
 See `examples/*.snil` and `examples/EXPECTED.md` — every component must make these
 produce exactly the listed output.
+
+## Source maps (ramani ya chanzo)
+SNIL is its own language; Python and JavaScript are merely its compilation targets.
+The compiler can emit a **source map** so a line in the generated Python/JS traces
+back to the original SNIL source line you wrote — errors and debugging point at the
+Kiswahili you authored, not at machine-emitted target code.
+
+API (additive — `toPython`/`toJS` are unchanged and byte-identical):
+
+- `toPythonWithMap(source, resolver?) → { code, map }`
+- `toJSWithMap(source, resolver?) → { code, map }`
+
+The `map` (`SourceMap`) carries both a simple `lines: number[]` (1-based target
+line → 1-based SNIL line; `0` = runtime prelude / no SNIL origin) and a standard
+**Source Map v3** object (`map.v3`, VLQ-encoded `mappings`) for tooling. Mapping is
+**line-level** (column 0).
+
+Error helpers (in `diagnose.ts`, re-exported from `index.ts`):
+`mapTargetLineToSource(map, targetLine)` returns the SNIL line; `formatTargetError(...)`
+renders a Kiswahili code-frame pointing at the SNIL source for a target-side error.

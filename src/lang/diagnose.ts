@@ -4,6 +4,7 @@
 // the hint (dokezo) — all in Kiswahili. Zero dependencies.
 import type { SnilError } from './errors';
 import type { Awamu } from './errors';
+import type { SourceMap } from './sourcemap';
 
 /** Phase → Kiswahili label shown in the header. */
 const AWAMU_LABEL: Record<Awamu, string> = {
@@ -61,5 +62,48 @@ export function formatError(source: string, err: SnilError): string {
   const tail = err.dokezo ? `${err.ujumbe} (dokezo: ${err.dokezo})` : err.ujumbe;
   out.push(tail);
 
+  return out.join('\n');
+}
+
+// ───────────────────── Target-side error → SNIL source ─────────────────────
+// When the COMPILED program (Python/JS) crashes, the runtime reports a line in
+// the generated target file. These helpers translate that target line back to the
+// SNIL line you wrote, using a SourceMap from toPythonWithMap / toJSWithMap.
+
+/**
+ * Map a 1-based target (generated Python/JS) line number to the 1-based SNIL
+ * source line via a SourceMap. Returns 0 if the target line has no SNIL origin
+ * (e.g. it falls in the runtime prelude) or is out of range.
+ */
+export function mapTargetLineToSource(map: SourceMap, targetLine: number): number {
+  if (targetLine < 1 || targetLine > map.lines.length) return 0;
+  return map.lines[targetLine - 1] ?? 0;
+}
+
+/**
+ * Render a Kiswahili code-frame that points at the SNIL SOURCE for an error that
+ * surfaced at `targetLine` in the generated Python/JS. `target` names the backend
+ * ('Python' | 'JavaScript'). Falls back gracefully when the target line cannot be
+ * mapped (prints the message + a note that the SNIL line is unknown).
+ */
+export function formatTargetError(
+  source: string,
+  map: SourceMap,
+  targetLine: number,
+  message: string,
+  target: 'Python' | 'JavaScript' = 'Python',
+): string {
+  const snilLine = mapTargetLineToSource(map, targetLine);
+  const lines = source.split('\n');
+  const out: string[] = [];
+
+  if (snilLine > 0 && snilLine <= lines.length) {
+    out.push(`Hitilafu (kutekeleza) — Mstari ${snilLine} (kutoka ${target} mstari ${targetLine}):`);
+    const gutter = String(snilLine);
+    out.push(`  ${gutter} | ${lines[snilLine - 1] ?? ''}`);
+  } else {
+    out.push(`Hitilafu (kutekeleza) — ${target} mstari ${targetLine} (chanzo cha SNIL hakijulikani):`);
+  }
+  out.push(message);
   return out.join('\n');
 }

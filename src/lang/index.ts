@@ -3,8 +3,10 @@
 import { tokenize } from './lexer';
 import { parse as parseTokens } from './parser';
 import { interpret, createSession, displayString } from './interpreter';
-import { generatePython } from './codegen_python';
-import { generateJS } from './codegen_js';
+import { generatePython, generatePythonWithMap } from './codegen_python';
+import { generateJS, generateJSWithMap } from './codegen_js';
+import { buildSourceMap } from './sourcemap';
+import type { SourceMap } from './sourcemap';
 import { SnilError } from './errors';
 import { combineResolvers, standardRegistryResolver } from './packages/registry';
 import type { Program } from './ast';
@@ -20,6 +22,9 @@ export {
 export type { Registry, SnilPackage } from './packages/registry';
 
 export { tokenize } from './lexer';
+export { buildSourceMap, encodeVLQ, decodeVLQ } from './sourcemap';
+export type { SourceMap, SourceMapV3, SourceMapEntry } from './sourcemap';
+export { mapTargetLineToSource, formatTargetError } from './diagnose';
 export { SnilError } from './errors';
 export type { Token } from './tokens';
 export type { Program } from './ast';
@@ -98,4 +103,37 @@ export function toPython(source: string, somaModuli?: ModuleResolver): string {
 /** Source → equivalent JavaScript (ES2020, runnable via `node`). Throws SnilError on syntax errors. */
 export function toJS(source: string, somaModuli?: ModuleResolver): string {
   return generateJS(parse(source), combineResolvers(somaModuli, standardRegistryResolver));
+}
+
+/**
+ * Source → equivalent Python AND a source map. The `code` is byte-identical to
+ * `toPython(source, resolver)`; the `map` traces each 1-based generated Python
+ * line back to the 1-based SNIL source line it came from (line-level; the runtime
+ * prelude maps to 0 = no SNIL origin). Throws SnilError on syntax errors.
+ */
+export function toPythonWithMap(
+  source: string,
+  somaModuli?: ModuleResolver,
+): { code: string; map: SourceMap } {
+  const { code, srcLines } = generatePythonWithMap(
+    parse(source),
+    combineResolvers(somaModuli, standardRegistryResolver),
+  );
+  return { code, map: buildSourceMap(srcLines, 'main.snil', source) };
+}
+
+/**
+ * Source → equivalent JavaScript AND a source map. The `code` is byte-identical to
+ * `toJS(source, resolver)`; the `map` traces each 1-based generated JS line back to
+ * the 1-based SNIL source line (line-level; prelude → 0). Throws on syntax errors.
+ */
+export function toJSWithMap(
+  source: string,
+  somaModuli?: ModuleResolver,
+): { code: string; map: SourceMap } {
+  const { code, srcLines } = generateJSWithMap(
+    parse(source),
+    combineResolvers(somaModuli, standardRegistryResolver),
+  );
+  return { code, map: buildSourceMap(srcLines, 'main.snil', source) };
 }

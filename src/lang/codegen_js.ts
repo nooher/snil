@@ -421,10 +421,28 @@ function safeName(name: string): string {
 }
 
 export function generateJS(program: Program, somaModuli?: import('./runtime').ModuleResolver): string {
+  return generateJSWithMap(program, somaModuli).code;
+}
+
+/**
+ * Like `generateJS`, but ALSO returns a parallel `srcLines` array: one entry per
+ * emitted target (JS) line, holding the 1-based SNIL source line it came from
+ * (0 = prelude / synthetic). The `code` is byte-identical to `generateJS`. Used by
+ * `toJSWithMap` to build a SourceMap.
+ */
+export function generateJSWithMap(
+  program: Program,
+  somaModuli?: import('./runtime').ModuleResolver,
+): { code: string; srcLines: number[] } {
   const out: string[] = [];
+  // Parallel to `out`: the SNIL source line each pushed line originated from.
+  const srcLines: number[] = [];
+  // The SNIL line currently being compiled; `line()` stamps each emitted line.
+  let currentLine = 0;
 
   function line(text: string, depth: number): void {
     out.push('  '.repeat(depth) + text);
+    srcLines.push(currentLine);
   }
 
   function block(stmts: Stmt[], depth: number): void {
@@ -440,11 +458,13 @@ export function generateJS(program: Program, somaModuli?: import('./runtime').Mo
     const start = out.length;
     block(fx.body, 1);
     const bodyLines = out.splice(start); // remove what we just emitted
+    srcLines.splice(start);              // keep the parallel map array in lock-step
     const body = bodyLines.join('\n');
     return `(function (${params}) {\n${body}\n})`;
   }
 
   function emitStmt(s: Stmt, depth: number): void {
+    currentLine = s.line; // every target line this statement emits maps to s.line
     switch (s.kind) {
       case 'VarDecl': {
         const n = s as VarDecl;
@@ -473,9 +493,11 @@ export function generateJS(program: Program, somaModuli?: import('./runtime').Mo
         const n = s as If;
         line(`if (_kweli(${expr(n.cond)})) {`, depth);
         block(n.then, depth + 1);
+        currentLine = n.line; // re-stamp: braces/else belong to the If, not the last child
         if (n.otherwise !== null) {
           line('} else {', depth);
           block(n.otherwise, depth + 1);
+          currentLine = n.line;
           line('}', depth);
         } else {
           line('}', depth);
@@ -486,6 +508,7 @@ export function generateJS(program: Program, somaModuli?: import('./runtime').Mo
         const n = s as ForEach;
         line(`for (const ${safeName(n.varName)} of ${expr(n.iterable)}) {`, depth);
         block(n.body, depth + 1);
+        currentLine = n.line;
         line('}', depth);
         return;
       }
@@ -499,10 +522,12 @@ export function generateJS(program: Program, somaModuli?: import('./runtime').Mo
         line(`if (${from} <= ${to}) {`, depth);
         line(`for (let ${v} = ${from}; ${v} <= ${to}; ${v}++) {`, depth + 1);
         block(n.body, depth + 2);
+        currentLine = n.line;
         line('}', depth + 1);
         line('} else {', depth);
         line(`for (let ${v} = ${from}; ${v} >= ${to}; ${v}--) {`, depth + 1);
         block(n.body, depth + 2);
+        currentLine = n.line;
         line('}', depth + 1);
         line('} }', depth);
         return;
@@ -511,6 +536,7 @@ export function generateJS(program: Program, somaModuli?: import('./runtime').Mo
         const n = s as While;
         line(`while (_kweli(${expr(n.cond)})) {`, depth);
         block(n.body, depth + 1);
+        currentLine = n.line;
         line('}', depth);
         return;
       }
@@ -519,6 +545,7 @@ export function generateJS(program: Program, somaModuli?: import('./runtime').Mo
         const params = n.params.map(safeName).join(', ');
         line(`function ${safeName(n.name)}(${params}) {`, depth);
         block(n.body, depth + 1);
+        currentLine = n.line;
         line('}', depth);
         return;
       }
@@ -531,8 +558,10 @@ export function generateJS(program: Program, somaModuli?: import('./runtime').Mo
         const n = s as Try;
         line('try {', depth);
         block(n.body, depth + 1);
+        currentLine = n.line;
         line('} catch (_e) {', depth);
         block(n.handler, depth + 1);
+        currentLine = n.line;
         line('}', depth);
         return;
       }
@@ -738,13 +767,34 @@ export function generateJS(program: Program, somaModuli?: import('./runtime').Mo
   // ── assemble ──
   // 1) inlined file-modules (dependency order), each emitted ONCE at top level.
   for (const mod of moduleOrder) {
-    out.push(`// ── moduli "${mod.name}" (imeingizwa moja kwa moja) ──`);
+    currentLine = 0; // the module banner comment has no single SNIL origin
+    line(`// ── moduli "${mod.name}" (imeingizwa moja kwa moja) ──`, 0);
     for (const s of mod.body) emitStmt(s, 0);
   }
   // 2) the main program body.
   for (const s of program.body) emitStmt(s, 0);
   // 3) flush collected output once at the end.
-  out.push('_flush();');
+  currentLine = 0;
+  line('_flush();', 0);
 
-  return PRELUDE + '\n' + out.join('\n') + '\n';
+  const code = PRELUDE + '\n' + out.join('\n') + '\n';
+
+  // Build the per-PHYSICAL-target-line source map. Most `out` entries are a single
+  // physical line, but an inlined anonymous function (FuncExpr) is one `out` entry
+  // that spans several physical lines (its body, joined by '\n'). Expand those so
+  // `srcLines` has exactly one entry per physical line in `code`. The whole
+  // multi-line entry maps to the same SNIL line (line-level granularity).
+  const bodySrc: number[] = [];
+  for (let i = 0; i < out.length; i++) {
+    const physical = out[i].split('\n').length;
+    for (let k = 0; k < physical; k++) bodySrc.push(srcLines[i]);
+  }
+  // Prepend one source-line-0 entry per PRELUDE physical line so target line
+  // numbers line up with the final `code` (PRELUDE + '\n' + body + '\n').
+  const preludeLineCount = (PRELUDE + '\n').split('\n').length - 1;
+  const fullSrc: number[] = new Array(preludeLineCount).fill(0).concat(bodySrc);
+  // `code` ends with a trailing '\n', so split('\n') yields one extra empty final
+  // line with no SNIL origin — pad so the map aligns exactly with `code`.
+  while (fullSrc.length < code.split('\n').length) fullSrc.push(0);
+  return { code, srcLines: fullSrc };
 }

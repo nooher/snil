@@ -488,7 +488,25 @@ function safeName(name: string): string {
 }
 
 export function generatePython(program: Program, somaModuli?: import('./runtime').ModuleResolver): string {
+  return generatePythonWithMap(program, somaModuli).code;
+}
+
+/**
+ * Like `generatePython`, but ALSO returns a parallel `srcLines` array: one entry
+ * per emitted target (Python) line, holding the 1-based SNIL source line it came
+ * from (0 = prelude / synthetic, no SNIL origin). The `code` is byte-identical to
+ * `generatePython`. Used by `toPythonWithMap` to build a SourceMap.
+ */
+export function generatePythonWithMap(
+  program: Program,
+  somaModuli?: import('./runtime').ModuleResolver,
+): { code: string; srcLines: number[] } {
   const out: string[] = [];
+  // Parallel to `out`: the SNIL source line each pushed line originated from.
+  const srcLines: number[] = [];
+  // The SNIL line currently being compiled; `line()` stamps each emitted line
+  // with it. Set per-statement in emitStmt (and per-lambda in hoistLambdas).
+  let currentLine = 0;
 
   // Anonymous functions (FuncExpr) can't be a Python `lambda` (multi-statement
   // bodies), so each is HOISTED to a uniquely-named `def` emitted immediately
@@ -500,6 +518,7 @@ export function generatePython(program: Program, somaModuli?: import('./runtime'
 
   function line(text: string, depth: number): void {
     out.push('    '.repeat(depth) + text);
+    srcLines.push(currentLine); // stamp this target line with the active SNIL line
   }
 
   function block(stmts: Stmt[], depth: number): void {
@@ -567,13 +586,17 @@ export function generatePython(program: Program, somaModuli?: import('./runtime'
       const name = `_kazi_${lambdaCounter++}`;
       lambdaName.set(fx, name);
       const params = fx.params.map(safeName).join(', ');
+      const saved = currentLine;
+      currentLine = fx.line; // the hoisted def + body map to the lambda's SNIL line
       line(`def ${name}(${params}):`, depth);
       block(fx.body, depth + 1);
+      currentLine = saved;
     }
   }
 
   function emitStmt(s: Stmt, depth: number): void {
     hoistLambdas(s, depth);
+    currentLine = s.line; // every target line this statement emits maps to s.line
     switch (s.kind) {
       case 'VarDecl': {
         const n = s as VarDecl;
@@ -600,6 +623,7 @@ export function generatePython(program: Program, somaModuli?: import('./runtime'
         line(`if ${expr(n.cond)}:`, depth);
         block(n.then, depth + 1);
         if (n.otherwise !== null) {
+          currentLine = n.line; // re-stamp: `else:` belongs to the If, not the last child
           line('else:', depth);
           block(n.otherwise, depth + 1);
         }
@@ -856,11 +880,22 @@ export function generatePython(program: Program, somaModuli?: import('./runtime'
   // ── assemble ──
   // 1) inlined file-modules (dependency order), each emitted ONCE at top level.
   for (const mod of moduleOrder) {
-    out.push(`# ── moduli "${mod.name}" (imeingizwa moja kwa moja) ──`);
+    currentLine = 0; // the module banner comment has no single SNIL origin
+    line(`# ── moduli "${mod.name}" (imeingizwa moja kwa moja) ──`, 0);
     for (const s of mod.body) emitStmt(s, 0);
   }
   // 2) the main program body.
   for (const s of program.body) emitStmt(s, 0);
 
-  return PRELUDE + '\n' + (out.length ? out.join('\n') + '\n' : '');
+  const code = PRELUDE + '\n' + (out.length ? out.join('\n') + '\n' : '');
+  // Build the per-target-line source map. The emitted file is the PRELUDE (which
+  // has no SNIL origin → source line 0) followed by the body lines in `out`, then
+  // a trailing newline. `srcLines` already parallels `out`; we just prepend one
+  // entry per PRELUDE line so target line numbers line up with the final `code`.
+  const preludeLineCount = (PRELUDE + '\n').split('\n').length - 1;
+  const fullSrc: number[] = new Array(preludeLineCount).fill(0).concat(srcLines);
+  // `code` ends with a trailing '\n' (when there is a body), so split('\n') yields
+  // one extra empty final line with no SNIL origin — pad so the map aligns exactly.
+  while (fullSrc.length < code.split('\n').length) fullSrc.push(0);
+  return { code, srcLines: fullSrc };
 }

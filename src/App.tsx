@@ -6,6 +6,9 @@ import { run, toPython } from './lang';
 import type { SnilError } from './lang';
 import { formatError } from './lang/diagnose';
 import { formatSnil } from './lang/format';
+import { Darasa } from './Darasa';
+
+type Modi = 'playground' | 'jifunze';
 
 // --- Mifano (examples) — chanzo cha .snil kimewekwa hapa moja kwa moja ---
 const MIFANO: { id: string; jina: string; maelezo: string; chanzo: string }[] = [
@@ -174,6 +177,35 @@ const MANENO_MSINGI: { neno: string; maana: string }[] = [
 type Kichupo = 'matokeo' | 'python';
 
 export function App() {
+  const [modi, setModi] = useState<Modi>('playground');
+  return (
+    <>
+      <div className="snil-modi-bar">
+        <div className="snil-modi" role="tablist">
+          <button
+            role="tab"
+            aria-selected={modi === 'playground'}
+            className={modi === 'playground' ? 'hai' : ''}
+            onClick={() => setModi('playground')}
+          >
+            Playground
+          </button>
+          <button
+            role="tab"
+            aria-selected={modi === 'jifunze'}
+            className={modi === 'jifunze' ? 'hai' : ''}
+            onClick={() => setModi('jifunze')}
+          >
+            Jifunze
+          </button>
+        </div>
+      </div>
+      {modi === 'playground' ? <Playground /> : <Darasa />}
+    </>
+  );
+}
+
+function Playground() {
   const [code, setCode] = useState<string>(
     MIFANO.find((m) => m.id === 'hesabu')!.chanzo,
   );

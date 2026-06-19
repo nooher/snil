@@ -270,9 +270,323 @@ body {
 .snil-chini .dot { color: var(--gold); }
 .snil-chini span:first-child { font-weight: 650; color: var(--green); letter-spacing: 0.04em; }
 
+/* ---------- Mode toggle (Playground ⇄ Jifunze) ---------- */
+.snil-modi-bar {
+  display: flex;
+  justify-content: center;
+  padding: 8px 22px;
+  background: var(--green-deep);
+  border-bottom: 1px solid rgba(243, 235, 220, 0.12);
+}
+.snil-modi {
+  display: flex;
+  gap: 4px;
+  background: rgba(243, 235, 220, 0.12);
+  border: 1.5px solid rgba(243, 235, 220, 0.3);
+  border-radius: 999px;
+  padding: 3px;
+}
+.snil-modi button {
+  font: inherit;
+  font-weight: 650;
+  font-size: 13px;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--sand-soft);
+  border-radius: 999px;
+  padding: 7px 16px;
+  transition: background .15s ease, color .15s ease;
+}
+.snil-modi button.hai {
+  background: var(--gold);
+  color: var(--green-deep);
+}
+
+/* ---------- DARASA (learn mode) ---------- */
+.darasa {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 270px 1fr;
+  min-height: 0;
+}
+
+.darasa-side {
+  background: var(--sand-soft);
+  border-right: 1px solid var(--sand-line);
+  padding: 18px 16px;
+  overflow-y: auto;
+}
+.darasa-utangulizi h2 {
+  margin: 2px 0 6px;
+  font-size: 16px;
+  color: var(--green);
+  letter-spacing: 0.02em;
+}
+.darasa-utangulizi p {
+  margin: 0 0 14px;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
+.darasa-maendeleo { margin-bottom: 16px; }
+.darasa-pau {
+  height: 8px;
+  background: var(--sand-line);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.darasa-pau-fill {
+  display: block;
+  height: 100%;
+  background: var(--green);
+  border-radius: 999px;
+  transition: width .25s ease;
+}
+.darasa-maendeleo-lebo {
+  display: block;
+  margin-top: 7px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  letter-spacing: 0.02em;
+}
+
+.darasa-orodha {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.darasa-somo {
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  background: var(--sand);
+  border: 1px solid var(--sand-line);
+  border-radius: var(--radius-s);
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  transition: border-color .15s ease, background .15s ease;
+}
+.darasa-somo:hover { border-color: var(--gold); }
+.darasa-somo.hai {
+  background: var(--green-soft);
+  border-color: var(--green);
+}
+.darasa-tiki {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--sand-line);
+  color: var(--ink-soft);
+}
+.darasa-somo.done .darasa-tiki {
+  background: var(--green);
+  color: var(--sand-soft);
+}
+.darasa-cheti-link .darasa-tiki { background: var(--gold); color: var(--green-deep); }
+.darasa-somo-kichwa { font-weight: 600; font-size: 13.5px; color: var(--charcoal); line-height: 1.3; }
+
+/* DARASA main column */
+.darasa-main {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.darasa-somo-kichwa-kuu h1 {
+  margin: 0 0 10px;
+  font-size: 22px;
+  color: var(--charcoal);
+  letter-spacing: 0.01em;
+}
+.darasa-somo-kichwa-kuu p {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: var(--charcoal);
+  line-height: 1.6;
+}
+.darasa-lengo {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: var(--green-soft);
+  border-left: 4px solid var(--green);
+  border-radius: var(--radius-s);
+}
+.darasa-lengo-lebo {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.13em;
+  font-weight: 700;
+  color: var(--green);
+}
+.darasa-lengo span:last-child { font-size: 14px; color: var(--charcoal); line-height: 1.5; }
+
+.darasa-mhariri { min-height: 240px; }
+.darasa-paneli { min-height: 150px; }
+
+.darasa-vitendo { display: flex; flex-wrap: wrap; gap: 10px; }
+.btn-line {
+  background: var(--sand-soft);
+  color: var(--green);
+  border: 1.5px solid var(--green);
+}
+.btn-line:hover { background: var(--green-soft); }
+.btn-ndogo { padding: 7px 14px; font-size: 13px; }
+
+.darasa-tokeo {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 13px 15px;
+  border-radius: var(--radius-s);
+  border: 1px solid;
+}
+.darasa-tokeo.sawa { background: var(--green-soft); border-color: var(--green); }
+.darasa-tokeo.kosa { background: #f7e6e2; border-color: var(--red); }
+.darasa-tokeo-ikoni {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  color: var(--sand-soft);
+}
+.darasa-tokeo.sawa .darasa-tokeo-ikoni { background: var(--green); }
+.darasa-tokeo.kosa .darasa-tokeo-ikoni { background: var(--red); }
+.darasa-tokeo-maandishi { display: flex; flex-direction: column; gap: 10px; }
+.darasa-tokeo-maandishi p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--charcoal); }
+.darasa-tokeo.sawa .darasa-tokeo-maandishi p { color: var(--green-deep); }
+.darasa-tokeo.kosa .darasa-tokeo-maandishi p { color: var(--red); }
+.darasa-tokeo-maandishi .btn-ndogo { align-self: flex-start; }
+
+/* DARASA empty state */
+.darasa-tupu {
+  margin: auto;
+  text-align: center;
+  padding: 40px;
+  color: var(--ink-soft);
+}
+.darasa-tupu h2 { margin: 16px 0 6px; color: var(--green); }
+.darasa-mark {
+  display: inline-block;
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  background: var(--gold);
+  position: relative;
+}
+.darasa-mark::after {
+  content: "";
+  position: absolute; inset: 11px;
+  border-radius: 4px;
+  background: var(--green-deep);
+}
+
+/* ---------- Cheti (certificate) ---------- */
+.cheti-eneo { display: grid; place-items: center; padding: 20px 0; }
+.cheti {
+  width: 100%;
+  max-width: 560px;
+  background: var(--sand-soft);
+  border: 2px solid var(--gold);
+  border-radius: var(--radius);
+  padding: 36px 34px 28px;
+  text-align: center;
+  box-shadow: 0 16px 40px -24px rgba(0,0,0,.4);
+  position: relative;
+}
+.cheti-mihuri {
+  display: grid;
+  place-items: center;
+  width: 48px; height: 48px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  background: var(--green);
+  color: var(--gold);
+  font-size: 24px;
+}
+.cheti-juu {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  font-weight: 700;
+  color: var(--gold);
+}
+.cheti-kichwa { margin: 6px 0 12px; font-size: 26px; color: var(--green); letter-spacing: 0.02em; }
+.cheti-maelezo { margin: 0 0 18px; font-size: 15px; color: var(--charcoal); }
+.cheti-tunza { margin: 0 0 8px; font-size: 12px; color: var(--ink-soft); letter-spacing: 0.04em; }
+.cheti-jina-ingizo {
+  font: inherit;
+  font-size: 15px;
+  text-align: center;
+  width: 100%;
+  max-width: 320px;
+  padding: 9px 12px;
+  border: 1px solid var(--sand-line);
+  border-radius: var(--radius-s);
+  background: var(--sand);
+  color: var(--charcoal);
+}
+.cheti-jina-ingizo:focus { outline: none; border-color: var(--green); }
+.cheti-jina-onyesho {
+  margin: 16px 0 4px;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--green-deep);
+  border-bottom: 2px solid var(--gold);
+  display: inline-block;
+  padding: 0 16px 6px;
+  min-width: 220px;
+}
+.cheti-maandishi {
+  margin: 14px auto 22px;
+  max-width: 420px;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+.cheti-chini {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 16px;
+  border-top: 1px solid var(--sand-line);
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+.cheti-saini { font-weight: 700; color: var(--green); letter-spacing: 0.05em; }
+
 /* ---------- Mobile ---------- */
 @media (max-width: 760px) {
   .snil-body { grid-template-columns: 1fr; }
+  .darasa { grid-template-columns: 1fr; }
+  .darasa-side {
+    border-right: none;
+    border-bottom: 1px solid var(--sand-line);
+    max-height: 260px;
+  }
+  .cheti { padding: 28px 20px 22px; }
+  .cheti-chini { flex-direction: column; gap: 6px; }
   .snil-side {
     border-right: none;
     border-bottom: 1px solid var(--sand-line);

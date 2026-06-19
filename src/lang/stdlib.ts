@@ -111,6 +111,174 @@ function numberList(args: unknown[], fnName: string): number[] {
   return raw.map((x) => asNumber(x, fnName));
 }
 
+// ───────────────────────── json helpers ─────────────────────────
+// JSON serialization is COMPACT (no spaces) and key order is insertion order so
+// the interpreter (Map), Python (dict) and JS (object) all emit byte-identical
+// strings. Numbers follow SNIL display rules (ints without ".0"). We implement
+// our OWN stringify + parser (rather than native JSON) so all three backends
+// behave identically down to escaping + error messages.
+
+/** Escape a string for a JSON double-quoted literal (compact, standard escapes). */
+function jsonEscape(s: string): string {
+  let out = '"';
+  for (const ch of s) {
+    const code = ch.codePointAt(0)!;
+    if (ch === '"') out += '\\"';
+    else if (ch === '\\') out += '\\\\';
+    else if (ch === '\n') out += '\\n';
+    else if (ch === '\r') out += '\\r';
+    else if (ch === '\t') out += '\\t';
+    else if (ch === '\b') out += '\\b';
+    else if (ch === '\f') out += '\\f';
+    else if (code < 0x20) out += '\\u' + code.toString(16).padStart(4, '0');
+    else out += ch;
+  }
+  return out + '"';
+}
+
+/** SNIL value → compact JSON string. Orodha→array, Kamusi(Map)→object. */
+function jsonStringify(v: unknown): string {
+  if (v === null || v === undefined) return 'null';
+  if (v === true) return 'true';
+  if (v === false) return 'false';
+  if (typeof v === 'number') {
+    if (!Number.isFinite(v)) {
+      throw Makosa.ainaMbaya('Kazi "tengeneza" haiwezi kubadilisha namba isiyo na kikomo kuwa JSON.', 0);
+    }
+    return String(v); // ints without ".0", decimals as-is (matches SNIL _str)
+  }
+  if (typeof v === 'string') return jsonEscape(v);
+  if (Array.isArray(v)) return '[' + v.map(jsonStringify).join(',') + ']';
+  if (v instanceof Map) {
+    const parts: string[] = [];
+    for (const [k, val] of v) parts.push(jsonEscape(k) + ':' + jsonStringify(val));
+    return '{' + parts.join(',') + '}';
+  }
+  throw Makosa.ainaMbaya('Kazi "tengeneza" inahitaji thamani ya JSON (namba, maandishi, kweli, tupu, orodha au kamusi).', 0);
+}
+
+/** Minimal recursive-descent JSON parser → SNIL values (object→Map, array→array).
+ *  Kiswahili error on invalid input — mirrored byte-for-byte in both codegens. */
+function jsonParse(text: string): unknown {
+  let i = 0;
+  const n = text.length;
+  const err = (): never => {
+    throw Makosa.ainaMbaya('Kazi "changanua" imepewa JSON isiyo sahihi.', 0);
+  };
+  function ws(): void {
+    while (i < n) {
+      const c = text[i];
+      if (c === ' ' || c === '\t' || c === '\n' || c === '\r') i++;
+      else break;
+    }
+  }
+  function value(): unknown {
+    ws();
+    if (i >= n) err();
+    const c = text[i];
+    if (c === '{') return obj();
+    if (c === '[') return arr();
+    if (c === '"') return str();
+    if (c === '-' || (c >= '0' && c <= '9')) return num();
+    if (text.startsWith('true', i)) { i += 4; return true; }
+    if (text.startsWith('false', i)) { i += 5; return false; }
+    if (text.startsWith('null', i)) { i += 4; return null; }
+    return err();
+  }
+  function obj(): Map<string, unknown> {
+    const m = new Map<string, unknown>();
+    i++; // {
+    ws();
+    if (text[i] === '}') { i++; return m; }
+    for (;;) {
+      ws();
+      if (text[i] !== '"') err();
+      const key = str();
+      ws();
+      if (text[i] !== ':') err();
+      i++;
+      m.set(key, value());
+      ws();
+      const c = text[i];
+      if (c === ',') { i++; continue; }
+      if (c === '}') { i++; return m; }
+      return err();
+    }
+  }
+  function arr(): unknown[] {
+    const a: unknown[] = [];
+    i++; // [
+    ws();
+    if (text[i] === ']') { i++; return a; }
+    for (;;) {
+      a.push(value());
+      ws();
+      const c = text[i];
+      if (c === ',') { i++; continue; }
+      if (c === ']') { i++; return a; }
+      return err();
+    }
+  }
+  function str(): string {
+    i++; // opening "
+    let s = '';
+    for (;;) {
+      if (i >= n) err();
+      const c = text[i++];
+      if (c === '"') return s;
+      if (c === '\\') {
+        if (i >= n) err();
+        const e = text[i++];
+        if (e === '"') s += '"';
+        else if (e === '\\') s += '\\';
+        else if (e === '/') s += '/';
+        else if (e === 'n') s += '\n';
+        else if (e === 't') s += '\t';
+        else if (e === 'r') s += '\r';
+        else if (e === 'b') s += '\b';
+        else if (e === 'f') s += '\f';
+        else if (e === 'u') {
+          const hex = text.slice(i, i + 4);
+          if (hex.length < 4 || !/^[0-9a-fA-F]{4}$/.test(hex)) err();
+          s += String.fromCharCode(parseInt(hex, 16));
+          i += 4;
+        } else err();
+      } else {
+        s += c;
+      }
+    }
+  }
+  function num(): number {
+    const start = i;
+    if (text[i] === '-') i++;
+    while (i < n && text[i] >= '0' && text[i] <= '9') i++;
+    if (text[i] === '.') { i++; while (i < n && text[i] >= '0' && text[i] <= '9') i++; }
+    if (text[i] === 'e' || text[i] === 'E') {
+      i++;
+      if (text[i] === '+' || text[i] === '-') i++;
+      while (i < n && text[i] >= '0' && text[i] <= '9') i++;
+    }
+    const slice = text.slice(start, i);
+    const val = Number(slice);
+    if (slice === '' || slice === '-' || Number.isNaN(val)) err();
+    return val;
+  }
+  const result = value();
+  ws();
+  if (i !== n) err();
+  return result;
+}
+
+// ───────────────────────── seti (set) helpers ─────────────────────────
+/** Dedupe a list by SNIL value-equality, preserving first-occurrence order. */
+function setDedupe(list: unknown[]): unknown[] {
+  const out: unknown[] = [];
+  for (const x of list) {
+    if (!out.some((y) => snilEq(x, y))) out.push(x);
+  }
+  return out;
+}
+
 // ───────────────────────── modules ─────────────────────────
 export const STDLIB: Record<string, Record<string, NativeFn>> = {
   hisabati: {
@@ -326,6 +494,37 @@ export const STDLIB: Record<string, Record<string, NativeFn>> = {
     },
     // idadi_funguo(kamusi) → idadi ya funguo katika kamusi (size).
     idadi_funguo: (args) => asDict(args[0], 'idadi_funguo').size,
+  },
+
+  json: {
+    // tengeneza(thamani) → maandishi ya JSON (compact, hakuna nafasi).
+    tengeneza: (args) => jsonStringify(args[0]),
+    // changanua(maandishi) → thamani za SNIL (object→kamusi, array→orodha).
+    changanua: (args) => jsonParse(asString(args[0], 'changanua')),
+  },
+
+  seti: {
+    // tengeneza(orodha) → orodha bila marudio (mpangilio wa kwanza-kutokea).
+    tengeneza: (args) => setDedupe(asList(args[0], 'tengeneza')),
+    // muungano(a, b) → muungano (union), bila marudio, mpangilio thabiti.
+    muungano: (args) => setDedupe(asList(args[0], 'muungano').concat(asList(args[1], 'muungano'))),
+    // makutano(a, b) → vipengele vilivyo katika a NA b (intersection).
+    makutano: (args) => {
+      const a = setDedupe(asList(args[0], 'makutano'));
+      const b = asList(args[1], 'makutano');
+      return a.filter((x) => b.some((y) => snilEq(x, y)));
+    },
+    // tofauti(a, b) → vipengele vya a visivyo katika b (difference).
+    tofauti: (args) => {
+      const a = setDedupe(asList(args[0], 'tofauti'));
+      const b = asList(args[1], 'tofauti');
+      return a.filter((x) => !b.some((y) => snilEq(x, y)));
+    },
+    // ina(seti, x) → je, seti ina x? (membership, kweli/si_kweli).
+    ina: (args) => asList(args[0], 'ina').some((x) => snilEq(x, args[1])),
+    // ukubwa(seti) → idadi ya vipengele tofauti (size, baada ya dedupe). Jina si
+    // "idadi" ili kuepuka mgongano na kazi ya kila-mahali `idadi` (urefu).
+    ukubwa: (args) => setDedupe(asList(args[0], 'ukubwa')).length,
   },
 
   // NOTE: muda reads the real clock — non-deterministic, so golden tests avoid it.

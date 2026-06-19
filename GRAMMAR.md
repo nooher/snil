@@ -157,6 +157,26 @@ mazingira (closure). Tabia ni sawasawa kwa interpreter, Python codegen, na JS co
 - `ina_ufunguo(kamusi, ufunguo)` — je, kamusi ina ufunguo huu? (kweli/si_kweli).
 - `idadi_funguo(kamusi)` — idadi ya funguo katika kamusi (size).
 
+**Moduli `json`** (`leta json`):
+- `tengeneza(thamani)` — geuza thamani ya SNIL kuwa maandishi ya **JSON** (stringify).
+  Orodha→array, kamusi→object, namba/maandishi/kweli/tupu→primitives za JSON. Matokeo
+  ni **compact** (hakuna nafasi: `{"k":"v"}`, `[1,2,3]`), mpangilio wa funguo ni wa
+  kuingizwa, na namba hufuata kanuni za SNIL (kamili bila `.0`). Matokeo ni sawasawa
+  **byte kwa byte** kwa interpreter, Python codegen, na JS codegen.
+- `changanua(maandishi)` — changanua maandishi ya JSON kuwa thamani za SNIL (object→kamusi,
+  array→orodha). JSON isiyo sahihi → kosa la Kiswahili (`SnilError`).
+- Mzunguko-kamili: `changanua(tengeneza(x))` ni sawa na `x` kwa aina zinazoungwa mkono.
+
+**Moduli `seti`** (`leta seti`): shughuli za seti juu ya orodha. Zote hurudisha **orodha**
+yenye mpangilio thabiti (kwanza-kutokea) ili matokeo yawe deterministic kwa backends zote;
+ulinganifu ni wa thamani (sawa na `orodha.ina`/`fahirisi`, wa kina kwa orodha/kamusi).
+- `tengeneza(orodha)` — orodha bila marudio (seti-kama-orodha / dedupe).
+- `muungano(a, b)` — muungano (union). `makutano(a, b)` — makutano (intersection).
+- `tofauti(a, b)` — tofauti (difference: `a` bila vilivyo katika `b`).
+- `ina(seti, x)` — je, seti ina `x`? (membership, kweli/si_kweli).
+- `ukubwa(seti)` — idadi ya vipengele tofauti (size). (Jina si `idadi` ili kuepuka
+  mgongano na kazi ya kila-mahali `idadi`.)
+
 **Moduli `muda`** (`leta muda`): `sasa`, `leo`, `mwaka`, `mwezi`, `siku` — husoma saa halisi
 (si deterministic; majaribio ya golden huyaepuka). **Moduli `faili`**: `soma`, `andika`,
 `ipo`, `futa`.

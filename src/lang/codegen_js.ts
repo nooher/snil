@@ -169,7 +169,7 @@ function punguza(orodha, f, anza) {
 }
 
 // ── SNIL stdlib (leta hisabati / maandishi / orodha / muda / faili) ──
-const hisabati = {
+var hisabati = {
   jumla: (...a) => _numList(a, "jumla").reduce((x, y) => x + y, 0),
   wastani: (...a) => { const n = _numList(a, "wastani"); if (n.length === 0) throw new Error('Kazi "wastani" inahitaji angalau namba moja.'); return n.reduce((x, y) => x + y, 0) / n.length; },
   kiwango_cha_juu: (...a) => { const n = _numList(a, "kiwango_cha_juu"); if (n.length === 0) throw new Error('Kazi "kiwango_cha_juu" inahitaji angalau namba moja.'); return Math.max(...n); },
@@ -184,7 +184,7 @@ const hisabati = {
   thamani_kamili: (x) => { if (typeof x !== "number") throw new Error('Kazi "thamani_kamili" inahitaji namba.'); return Math.abs(x); },
 };
 
-const maandishi = {
+var maandishi = {
   herufi_kubwa: (s) => String(s).toUpperCase(),
   herufi_ndogo: (s) => String(s).toLowerCase(),
   unganisha: (list, sep) => { if (!Array.isArray(list)) throw new Error('Kazi "unganisha" inahitaji orodha.'); return list.map(_str).join(sep === undefined ? "" : sep); },
@@ -200,7 +200,7 @@ const maandishi = {
   kata: (s, anza, mwisho) => { if (typeof anza !== "number" || !Number.isInteger(anza) || typeof mwisho !== "number" || !Number.isInteger(mwisho)) throw new Error('Kazi "kata" inahitaji namba kamili.'); s = String(s); const a = _clamp(anza, s.length), b = _clamp(mwisho, s.length); return a >= b ? "" : s.slice(a, b); },
 };
 
-const orodha = {
+var orodha = {
   panga: (list) => {
     if (!Array.isArray(list)) throw new Error('Kazi "panga" inahitaji orodha.');
     const copy = list.slice();
@@ -224,14 +224,165 @@ function _isDict(d) {
   return d !== null && typeof d === "object" && !Array.isArray(d);
 }
 
-const kamusi = {
+var kamusi = {
   funguo: (d) => { if (!_isDict(d)) throw new Error('Kazi "funguo" inahitaji kamusi.'); return Object.keys(d); },
   thamani: (d) => { if (!_isDict(d)) throw new Error('Kazi "thamani" inahitaji kamusi.'); return Object.keys(d).map((k) => d[k]); },
   ina_ufunguo: (d, key) => { if (!_isDict(d)) throw new Error('Kazi "ina_ufunguo" inahitaji kamusi.'); return Object.prototype.hasOwnProperty.call(d, key); },
   idadi_funguo: (d) => { if (!_isDict(d)) throw new Error('Kazi "idadi_funguo" inahitaji kamusi.'); return Object.keys(d).length; },
 };
 
-const muda = {
+// ── JSON (leta json): tengeneza / changanua — compact, byte-identical ──
+function _json_escape(s) {
+  let out = '"';
+  for (const ch of s) {
+    const code = ch.codePointAt(0);
+    if (ch === '"') out += '\\\\"';
+    else if (ch === "\\\\") out += "\\\\\\\\";
+    else if (ch === "\\n") out += "\\\\n";
+    else if (ch === "\\r") out += "\\\\r";
+    else if (ch === "\\t") out += "\\\\t";
+    else if (ch === "\\b") out += "\\\\b";
+    else if (ch === "\\f") out += "\\\\f";
+    else if (code < 0x20) out += "\\\\u" + code.toString(16).padStart(4, "0");
+    else out += ch;
+  }
+  return out + '"';
+}
+function _json_stringify(v) {
+  if (v === null || v === undefined) return "null";
+  if (v === true) return "true";
+  if (v === false) return "false";
+  if (typeof v === "number") {
+    if (!Number.isFinite(v)) throw new Error('Kazi "tengeneza" haiwezi kubadilisha namba isiyo na kikomo kuwa JSON.');
+    return _str(v);
+  }
+  if (typeof v === "string") return _json_escape(v);
+  if (Array.isArray(v)) return "[" + v.map(_json_stringify).join(",") + "]";
+  if (typeof v === "object") {
+    return "{" + Object.keys(v).map((k) => _json_escape(k) + ":" + _json_stringify(v[k])).join(",") + "}";
+  }
+  throw new Error('Kazi "tengeneza" inahitaji thamani ya JSON (namba, maandishi, kweli, tupu, orodha au kamusi).');
+}
+function _json_parse(text) {
+  let i = 0;
+  const n = text.length;
+  const err = () => { throw new Error('Kazi "changanua" imepewa JSON isiyo sahihi.'); };
+  function ws() { while (i < n && (text[i] === " " || text[i] === "\\t" || text[i] === "\\n" || text[i] === "\\r")) i++; }
+  function value() {
+    ws();
+    if (i >= n) err();
+    const c = text[i];
+    if (c === "{") return obj();
+    if (c === "[") return arr();
+    if (c === '"') return strv();
+    if (c === "-" || (c >= "0" && c <= "9")) return num();
+    if (text.startsWith("true", i)) { i += 4; return true; }
+    if (text.startsWith("false", i)) { i += 5; return false; }
+    if (text.startsWith("null", i)) { i += 4; return null; }
+    return err();
+  }
+  function obj() {
+    const m = {};
+    i++; ws();
+    if (text[i] === "}") { i++; return m; }
+    for (;;) {
+      ws();
+      if (text[i] !== '"') err();
+      const key = strv();
+      ws();
+      if (text[i] !== ":") err();
+      i++;
+      m[key] = value();
+      ws();
+      const c = text[i];
+      if (c === ",") { i++; continue; }
+      if (c === "}") { i++; return m; }
+      return err();
+    }
+  }
+  function arr() {
+    const a = [];
+    i++; ws();
+    if (text[i] === "]") { i++; return a; }
+    for (;;) {
+      a.push(value());
+      ws();
+      const c = text[i];
+      if (c === ",") { i++; continue; }
+      if (c === "]") { i++; return a; }
+      return err();
+    }
+  }
+  function strv() {
+    i++;
+    let s = "";
+    for (;;) {
+      if (i >= n) err();
+      const c = text[i++];
+      if (c === '"') return s;
+      if (c === "\\\\") {
+        if (i >= n) err();
+        const e = text[i++];
+        if (e === '"') s += '"';
+        else if (e === "\\\\") s += "\\\\";
+        else if (e === "/") s += "/";
+        else if (e === "n") s += "\\n";
+        else if (e === "t") s += "\\t";
+        else if (e === "r") s += "\\r";
+        else if (e === "b") s += "\\b";
+        else if (e === "f") s += "\\f";
+        else if (e === "u") {
+          const hex = text.slice(i, i + 4);
+          if (hex.length < 4 || !/^[0-9a-fA-F]{4}$/.test(hex)) err();
+          s += String.fromCharCode(parseInt(hex, 16));
+          i += 4;
+        } else err();
+      } else {
+        s += c;
+      }
+    }
+  }
+  function num() {
+    const start = i;
+    if (text[i] === "-") i++;
+    while (i < n && text[i] >= "0" && text[i] <= "9") i++;
+    if (text[i] === ".") { i++; while (i < n && text[i] >= "0" && text[i] <= "9") i++; }
+    if (text[i] === "e" || text[i] === "E") {
+      i++;
+      if (text[i] === "+" || text[i] === "-") i++;
+      while (i < n && text[i] >= "0" && text[i] <= "9") i++;
+    }
+    const slice = text.slice(start, i);
+    const val = Number(slice);
+    if (slice === "" || slice === "-" || Number.isNaN(val)) err();
+    return val;
+  }
+  const result = value();
+  ws();
+  if (i !== n) err();
+  return result;
+}
+var json = {
+  tengeneza: (v) => _json_stringify(v),
+  changanua: (s) => { if (typeof s !== "string") throw new Error('Kazi "changanua" inahitaji maandishi.'); return _json_parse(s); },
+};
+
+// ── seti (leta seti): set operations over lists, stable first-occurrence order ──
+function _set_dedupe(xs) {
+  const out = [];
+  for (const x of xs) if (!out.some((y) => _eq(x, y))) out.push(x);
+  return out;
+}
+var seti = {
+  tengeneza: (xs) => { if (!Array.isArray(xs)) throw new Error('Kazi "tengeneza" inahitaji orodha.'); return _set_dedupe(xs); },
+  muungano: (a, b) => { if (!Array.isArray(a) || !Array.isArray(b)) throw new Error('Kazi "muungano" inahitaji orodha.'); return _set_dedupe(a.concat(b)); },
+  makutano: (a, b) => { if (!Array.isArray(a) || !Array.isArray(b)) throw new Error('Kazi "makutano" inahitaji orodha.'); const da = _set_dedupe(a); return da.filter((x) => b.some((y) => _eq(x, y))); },
+  tofauti: (a, b) => { if (!Array.isArray(a) || !Array.isArray(b)) throw new Error('Kazi "tofauti" inahitaji orodha.'); const da = _set_dedupe(a); return da.filter((x) => !b.some((y) => _eq(x, y))); },
+  ina: (s, x) => { if (!Array.isArray(s)) throw new Error('Kazi "ina" inahitaji orodha.'); return s.some((y) => _eq(x, y)); },
+  ukubwa: (s) => { if (!Array.isArray(s)) throw new Error('Kazi "ukubwa" inahitaji orodha.'); return _set_dedupe(s).length; },
+};
+
+var muda = {
   sasa: () => new Date().toISOString(),
   leo: () => new Date().toISOString().slice(0, 10),
   mwaka: () => new Date().getFullYear(),
@@ -239,7 +390,7 @@ const muda = {
   siku: () => new Date().getDate(),
 };
 
-const faili = {
+var faili = {
   soma: (path) => { const fs = require("fs"); return fs.readFileSync(String(path), "utf-8"); },
   andika: (path, data) => { const fs = require("fs"); fs.writeFileSync(String(path), _str(data === undefined ? "" : data), "utf-8"); return null; },
   ipo: (path) => { const fs = require("fs"); return fs.existsSync(String(path)); },

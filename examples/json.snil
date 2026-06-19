@@ -1,0 +1,41 @@
+# json — kutengeneza na kuchanganua JSON (serialize / parse)
+# Inaonyesha: tengeneza (stringify, compact) + changanua (parse) + round-trip.
+# NOTE: katika maandishi ya SNIL, "{" huanza uingizaji wa msemo; kwa "{" halisi
+# ndani ya JSON ya moja kwa moja tunatumia "\{" na "\}".
+
+leta json
+
+# Kamusi → JSON object (mpangilio wa kuingizwa hudumishwa).
+weka mtu kuwa { jina: "Asha", umri: 20, mwanafunzi: kweli }
+onyesha tengeneza(mtu)
+
+# Orodha yenye aina mchanganyiko → JSON array.
+weka orodha_data kuwa [1, "mbili", kweli, tupu, 3.5]
+onyesha tengeneza(orodha_data)
+
+# Muundo wa ndani kwa ndani (nested).
+weka shule kuwa { jina: "Shule A", wanafunzi: [{ jina: "Juma" }, { jina: "Neema" }] }
+onyesha tengeneza(shule)
+
+# changanua: JSON object → kamusi, kisha soma kiungo.
+weka p kuwa changanua("\{\"mji\":\"Dodoma\",\"idadi\":410000\}")
+onyesha p.mji
+onyesha p.idadi
+
+# changanua: JSON array → orodha.
+weka namba_orodha kuwa changanua("[10, 20, 30]")
+onyesha namba_orodha[1]
+
+# Round-trip: changanua(tengeneza(x)) == x kwa aina zinazoungwa mkono.
+weka rt kuwa changanua(tengeneza(mtu))
+onyesha rt == mtu
+
+weka rt2 kuwa changanua(tengeneza(shule))
+onyesha rt2 == shule
+
+# Kosa la Kiswahili kwa JSON isiyo sahihi.
+jaribu
+    onyesha changanua("si json")
+kosa
+    onyesha "JSON ina kosa"
+mwisho

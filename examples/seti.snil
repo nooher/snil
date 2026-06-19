@@ -1,0 +1,31 @@
+# seti — shughuli za seti juu ya orodha (set operations)
+# Mpangilio ni thabiti (kwanza-kutokea) ili matokeo yawe sawa kwa backends zote.
+
+leta seti
+
+weka a kuwa [1, 2, 2, 3, 3, 3]
+weka b kuwa [3, 4, 5]
+
+# tengeneza: ondoa marudio.
+onyesha tengeneza(a)
+
+# muungano (union).
+onyesha muungano(a, b)
+
+# makutano (intersection).
+onyesha makutano(a, b)
+
+# tofauti (difference: a bila b).
+onyesha tofauti(a, b)
+
+# ina (membership).
+onyesha ina(a, 2)
+onyesha ina(a, 9)
+
+# ukubwa (size baada ya dedupe; jina si "idadi" ili kuepuka mgongano na builtin).
+onyesha ukubwa(a)
+
+# Hufanya kazi kwa maandishi pia.
+weka matunda kuwa ["embe", "ndizi", "embe", "papai"]
+onyesha tengeneza(matunda)
+onyesha ukubwa(matunda)

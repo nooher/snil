@@ -207,6 +207,26 @@ const MODULI: { jina: string; leta: string; kazi: { kazi: string; maana: string 
     ],
   },
   {
+    jina: 'json',
+    leta: 'leta json',
+    kazi: [
+      { kazi: 'tengeneza(thamani)', maana: 'geuza kuwa JSON (compact stringify)' },
+      { kazi: 'changanua(maandishi)', maana: 'changanua JSON kuwa thamani za SNIL' },
+    ],
+  },
+  {
+    jina: 'seti',
+    leta: 'leta seti',
+    kazi: [
+      { kazi: 'tengeneza(orodha)', maana: 'orodha bila marudio (set/dedupe)' },
+      { kazi: 'muungano(a, b)', maana: 'muungano (union)' },
+      { kazi: 'makutano(a, b)', maana: 'makutano (intersection)' },
+      { kazi: 'tofauti(a, b)', maana: 'tofauti (difference: a bila b)' },
+      { kazi: 'ina(seti, x)', maana: 'je, seti ina x? (membership)' },
+      { kazi: 'ukubwa(seti)', maana: 'idadi ya vipengele tofauti (size)' },
+    ],
+  },
+  {
     jina: 'muda',
     leta: 'leta muda',
     kazi: [

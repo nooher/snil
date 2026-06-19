@@ -243,6 +243,208 @@ class _Kamusi:
         return len(d)
 kamusi = _Kamusi()
 
+# ── SNIL value-equality (mirrors interpreter valuesEqual / JS _eq) ──
+def _eq(a, b):
+    if a is b:
+        return True
+    if isinstance(a, bool) or isinstance(b, bool):
+        return a is b
+    if isinstance(a, list) and isinstance(b, list):
+        if len(a) != len(b):
+            return False
+        return all(_eq(x, y) for x, y in zip(a, b))
+    if isinstance(a, dict) and isinstance(b, dict):
+        if len(a) != len(b):
+            return False
+        for k, v in a.items():
+            if k not in b or not _eq(v, b[k]):
+                return False
+        return True
+    if isinstance(a, (int, float)) and isinstance(b, (int, float)):
+        return a == b
+    if isinstance(a, str) and isinstance(b, str):
+        return a == b
+    if a is None and b is None:
+        return True
+    return False
+
+# ── JSON (leta json): tengeneza / changanua — compact, byte-identical ──
+def _json_escape(s):
+    out = ['"']
+    for ch in s:
+        code = ord(ch)
+        if ch == '"': out.append('\\\\"')
+        elif ch == "\\\\": out.append("\\\\\\\\")
+        elif ch == "\\n": out.append("\\\\n")
+        elif ch == "\\r": out.append("\\\\r")
+        elif ch == "\\t": out.append("\\\\t")
+        elif ch == "\\b": out.append("\\\\b")
+        elif ch == "\\f": out.append("\\\\f")
+        elif code < 0x20: out.append("\\\\u" + format(code, "04x"))
+        else: out.append(ch)
+    out.append('"')
+    return "".join(out)
+
+def _json_stringify(v):
+    if v is None:
+        return "null"
+    if v is True:
+        return "true"
+    if v is False:
+        return "false"
+    if isinstance(v, float):
+        import math as _m
+        if not _m.isfinite(v):
+            raise Exception('Kazi "tengeneza" haiwezi kubadilisha namba isiyo na kikomo kuwa JSON.')
+        return _str(v)
+    if isinstance(v, int):
+        return _str(v)
+    if isinstance(v, str):
+        return _json_escape(v)
+    if isinstance(v, list):
+        return "[" + ",".join(_json_stringify(x) for x in v) + "]"
+    if isinstance(v, dict):
+        return "{" + ",".join(_json_escape(k) + ":" + _json_stringify(val) for k, val in v.items()) + "}"
+    raise Exception('Kazi "tengeneza" inahitaji thamani ya JSON (namba, maandishi, kweli, tupu, orodha au kamusi).')
+
+def _json_parse(text):
+    state = {"i": 0}
+    n = len(text)
+    def err():
+        raise Exception('Kazi "changanua" imepewa JSON isiyo sahihi.')
+    def ws():
+        while state["i"] < n and text[state["i"]] in " \\t\\n\\r":
+            state["i"] += 1
+    def value():
+        ws()
+        if state["i"] >= n: err()
+        c = text[state["i"]]
+        if c == "{": return obj()
+        if c == "[": return arr()
+        if c == '"': return strv()
+        if c == "-" or ("0" <= c <= "9"): return num()
+        if text.startswith("true", state["i"]): state["i"] += 4; return True
+        if text.startswith("false", state["i"]): state["i"] += 5; return False
+        if text.startswith("null", state["i"]): state["i"] += 4; return None
+        err()
+    def obj():
+        m = {}
+        state["i"] += 1
+        ws()
+        if state["i"] < n and text[state["i"]] == "}":
+            state["i"] += 1; return m
+        while True:
+            ws()
+            if state["i"] >= n or text[state["i"]] != '"': err()
+            key = strv()
+            ws()
+            if state["i"] >= n or text[state["i"]] != ":": err()
+            state["i"] += 1
+            m[key] = value()
+            ws()
+            c = text[state["i"]] if state["i"] < n else ""
+            if c == ",": state["i"] += 1; continue
+            if c == "}": state["i"] += 1; return m
+            err()
+    def arr():
+        a = []
+        state["i"] += 1
+        ws()
+        if state["i"] < n and text[state["i"]] == "]":
+            state["i"] += 1; return a
+        while True:
+            a.append(value())
+            ws()
+            c = text[state["i"]] if state["i"] < n else ""
+            if c == ",": state["i"] += 1; continue
+            if c == "]": state["i"] += 1; return a
+            err()
+    def strv():
+        state["i"] += 1
+        out = []
+        while True:
+            if state["i"] >= n: err()
+            c = text[state["i"]]; state["i"] += 1
+            if c == '"': return "".join(out)
+            if c == "\\\\":
+                if state["i"] >= n: err()
+                e = text[state["i"]]; state["i"] += 1
+                if e == '"': out.append('"')
+                elif e == "\\\\": out.append("\\\\")
+                elif e == "/": out.append("/")
+                elif e == "n": out.append("\\n")
+                elif e == "t": out.append("\\t")
+                elif e == "r": out.append("\\r")
+                elif e == "b": out.append("\\b")
+                elif e == "f": out.append("\\f")
+                elif e == "u":
+                    hexs = text[state["i"]:state["i"]+4]
+                    if len(hexs) < 4 or any(h not in "0123456789abcdefABCDEF" for h in hexs): err()
+                    out.append(chr(int(hexs, 16)))
+                    state["i"] += 4
+                else: err()
+            else:
+                out.append(c)
+    def num():
+        start = state["i"]
+        if text[state["i"]] == "-": state["i"] += 1
+        while state["i"] < n and "0" <= text[state["i"]] <= "9": state["i"] += 1
+        if state["i"] < n and text[state["i"]] == ".":
+            state["i"] += 1
+            while state["i"] < n and "0" <= text[state["i"]] <= "9": state["i"] += 1
+        if state["i"] < n and text[state["i"]] in "eE":
+            state["i"] += 1
+            if state["i"] < n and text[state["i"]] in "+-": state["i"] += 1
+            while state["i"] < n and "0" <= text[state["i"]] <= "9": state["i"] += 1
+        slice_ = text[start:state["i"]]
+        if slice_ == "" or slice_ == "-": err()
+        if "." in slice_ or "e" in slice_ or "E" in slice_:
+            return float(slice_)
+        return int(slice_)
+    result = value()
+    ws()
+    if state["i"] != n: err()
+    return result
+
+class _Json:
+    def tengeneza(self, v): return _json_stringify(v)
+    def changanua(self, s):
+        if not isinstance(s, str):
+            raise Exception('Kazi "changanua" inahitaji maandishi.')
+        return _json_parse(s)
+json = _Json()
+
+# ── seti (leta seti): set operations over lists, stable first-occurrence order ──
+def _set_dedupe(xs):
+    out = []
+    for x in xs:
+        if not any(_eq(x, y) for y in out):
+            out.append(x)
+    return out
+
+class _Seti:
+    def tengeneza(self, xs):
+        if not isinstance(xs, list): raise Exception('Kazi "tengeneza" inahitaji orodha.')
+        return _set_dedupe(xs)
+    def muungano(self, a, b):
+        if not isinstance(a, list) or not isinstance(b, list): raise Exception('Kazi "muungano" inahitaji orodha.')
+        return _set_dedupe(list(a) + list(b))
+    def makutano(self, a, b):
+        if not isinstance(a, list) or not isinstance(b, list): raise Exception('Kazi "makutano" inahitaji orodha.')
+        da = _set_dedupe(a)
+        return [x for x in da if any(_eq(x, y) for y in b)]
+    def tofauti(self, a, b):
+        if not isinstance(a, list) or not isinstance(b, list): raise Exception('Kazi "tofauti" inahitaji orodha.')
+        da = _set_dedupe(a)
+        return [x for x in da if not any(_eq(x, y) for y in b)]
+    def ina(self, s, x):
+        if not isinstance(s, list): raise Exception('Kazi "ina" inahitaji orodha.')
+        return any(_eq(x, y) for y in s)
+    def ukubwa(self, s):
+        if not isinstance(s, list): raise Exception('Kazi "ukubwa" inahitaji orodha.')
+        return len(_set_dedupe(s))
+seti = _Seti()
+
 class _Muda:
     def sasa(self):
         import datetime as _dt; return _dt.datetime.now().isoformat()

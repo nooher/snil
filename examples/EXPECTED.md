@@ -115,3 +115,29 @@ AINAZNAT
 120
 abc
 ```
+
+## json.snil
+```
+{"jina":"Asha","umri":20,"mwanafunzi":true}
+[1,"mbili",true,null,3.5]
+{"jina":"Shule A","wanafunzi":[{"jina":"Juma"},{"jina":"Neema"}]}
+Dodoma
+410000
+20
+kweli
+kweli
+JSON ina kosa
+```
+
+## seti.snil
+```
+[1, 2, 3]
+[1, 2, 3, 4, 5]
+[3]
+[1, 2]
+kweli
+si_kweli
+3
+[embe, ndizi, papai]
+3
+```

@@ -65,6 +65,25 @@ export function formatError(source: string, err: SnilError): string {
   return out.join('\n');
 }
 
+/**
+ * Render MANY Kiswahili code-frames at once. Used by multi-error diagnostics so a
+ * learner sees every syntax mistake in one pass, not just the first. Each error is
+ * rendered with the existing single-error `formatError` (line + caret + dokezo),
+ * sorted by source line, under a header that counts them; frames are separated by
+ * a thin rule. With zero errors → '' ; with one → just its frame + header.
+ */
+export function formatErrors(source: string, errors: SnilError[]): string {
+  if (errors.length === 0) return '';
+  // Stable sort by line so the frames read top-to-bottom like the program.
+  const ordered = [...errors].sort((a, b) => (a.line || 0) - (b.line || 0));
+  const n = ordered.length;
+  const header =
+    n === 1 ? 'Kosa 1 limepatikana:' : `Makosa ${n} yamepatikana:`;
+  const sep = '\n\n──────────\n\n';
+  const frames = ordered.map((e) => formatError(source, e)).join(sep);
+  return `${header}\n\n${frames}`;
+}
+
 // ───────────────────── Target-side error → SNIL source ─────────────────────
 // When the COMPILED program (Python/JS) crashes, the runtime reports a line in
 // the generated target file. These helpers translate that target line back to the

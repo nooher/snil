@@ -16,7 +16,37 @@ import type {
 } from './ast';
 import { tokenize } from './lexer';
 
+/** Result of recovering parse: a (possibly partial) Program plus every syntax
+ *  error found. Used by `parseAll` / `diagnoseAll`; never throws on syntax. */
+export interface ParseAllResult {
+  program: Program | null;
+  errors: SnilError[];
+}
+
+/** Upper bound on accumulated syntax errors, to stop cascade storms. */
+const MAX_ERRORS = 25;
+
+/** Top-level keywords that begin a fresh statement — safe re-sync points. */
+const STMT_STARTERS = new Set<T>([
+  T.ONYESHA, T.WEKA, T.ULIZA, T.IKIWA, T.KWA, T.WAKATI, T.KAZI,
+  T.RUDISHA, T.JARIBU, T.LETA, T.ONGEZA, T.ONDOA, T.ANDIKA, T.SOMA,
+]);
+
+/** Token[] → Program. Throws the FIRST SnilError on a syntax error (legacy API,
+ *  byte-for-byte unchanged). */
 export function parse(tokens: Token[]): Program {
+  return parseImpl(tokens, false).program as Program;
+}
+
+/** Token[] → { program, errors }. Recovers from syntax errors: records each one,
+ *  synchronizes to the next statement boundary, and keeps parsing to surface more.
+ *  Never throws; `program` may be partial. Errors are capped (see MAX_ERRORS). */
+export function parseAll(tokens: Token[]): ParseAllResult {
+  return parseImpl(tokens, true);
+}
+
+function parseImpl(tokens: Token[], recover: boolean): ParseAllResult {
+  const errors: SnilError[] = [];
   let pos = 0;
 
   // ───────────────── msaada wa tokeni ─────────────────
@@ -44,12 +74,46 @@ export function parse(tokens: Token[]): Program {
   // ───────────────── programu ─────────────────
   const program: Stmt[] = [];
   skipNewlines();
-  while (!isEnd()) {
-    program.push(statement());
-    // baada ya sentensi: tunatarajia NEWLINE au mwisho/funga-block
-    skipNewlines();
+  if (!recover) {
+    // Legacy path: throw on the first error, behaviour byte-for-byte unchanged.
+    while (!isEnd()) {
+      program.push(statement());
+      // baada ya sentensi: tunatarajia NEWLINE au mwisho/funga-block
+      skipNewlines();
+    }
+    return { program: { kind: 'Program', body: program }, errors };
   }
-  return { kind: 'Program', body: program };
+
+  // Recovering path: catch each statement's SnilError, record it, synchronize to
+  // the next statement boundary, and keep going. Always make progress so a
+  // pathological input cannot loop forever; stop accumulating past MAX_ERRORS.
+  while (!isEnd()) {
+    const before = pos;
+    try {
+      program.push(statement());
+      skipNewlines();
+    } catch (e) {
+      if (!(e instanceof SnilError)) throw e; // non-syntax fault: don't swallow
+      if (errors.length < MAX_ERRORS) errors.push(e);
+      synchronize();
+      // Guarantee forward progress even if synchronize() couldn't advance
+      // (e.g. error raised at the very token a starter sits on).
+      if (pos === before && !isEnd()) next();
+      if (errors.length >= MAX_ERRORS) break;
+    }
+  }
+  return { program: { kind: 'Program', body: program }, errors };
+
+  // Skip tokens until a safe re-sync point: just past a NEWLINE, or sitting on a
+  // top-level statement keyword / EOF. This abandons the rest of the broken
+  // statement so the next one can be parsed cleanly.
+  function synchronize(): void {
+    while (!isEnd()) {
+      if (at(T.NEWLINE)) { skipNewlines(); return; }
+      if (STMT_STARTERS.has(peek().type)) return;
+      next();
+    }
+  }
 
   // ───────────────── sentensi ─────────────────
   function statement(): Stmt {

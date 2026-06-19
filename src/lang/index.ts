@@ -1,7 +1,7 @@
 // index.ts — the public surface of the SNIL toolchain. Playground, CLI and tests
 // use ONLY these. Pipeline:  source → tokenize → parse → (interpret | toPython).
 import { tokenize } from './lexer';
-import { parse as parseTokens } from './parser';
+import { parse as parseTokens, parseAll as parseAllTokens } from './parser';
 import { interpret, createSession, displayString } from './interpreter';
 import { generatePython, generatePythonWithMap } from './codegen_python';
 import { generateJS, generateJSWithMap } from './codegen_js';
@@ -24,7 +24,8 @@ export type { Registry, SnilPackage } from './packages/registry';
 export { tokenize } from './lexer';
 export { buildSourceMap, encodeVLQ, decodeVLQ } from './sourcemap';
 export type { SourceMap, SourceMapV3, SourceMapEntry } from './sourcemap';
-export { mapTargetLineToSource, formatTargetError } from './diagnose';
+export { mapTargetLineToSource, formatTargetError, formatError, formatErrors } from './diagnose';
+export type { ParseAllResult } from './parser';
 export { SnilError } from './errors';
 export type { Token } from './tokens';
 export type { Program } from './ast';
@@ -71,6 +72,34 @@ export function createReplSession(): ReplSession {
 /** Source → AST (tokenize + parse). Throws SnilError on lexical/syntax errors. */
 export function parse(source: string): Program {
   return parseTokens(tokenize(source));
+}
+
+/**
+ * Source → { program, errors } with PARSER error recovery. Tokenizes, then parses
+ * with synchronization so EVERY syntax error is collected (capped) instead of
+ * stopping at the first. `program` may be partial. A lexical error (the lexer
+ * still throws single) is returned as the sole error with `program: null`.
+ * Additive — does NOT change `parse`/`run` behaviour for valid programs.
+ */
+export function parseAll(source: string): { program: Program | null; errors: SnilError[] } {
+  let tokens;
+  try {
+    tokens = tokenize(source);
+  } catch (e) {
+    const err = e instanceof SnilError ? e : new SnilError(String((e as Error)?.message ?? e), 0, 'kupima');
+    return { program: null, errors: [err] };
+  }
+  return parseAllTokens(tokens);
+}
+
+/**
+ * Source → every STATIC diagnostic (lexer + parser), in source order. Combines a
+ * lexical error (if any) with all recovered syntax errors. Returns [] for a clean
+ * program. Runtime errors are NOT included — they remain single + thrown at
+ * execution time (that is by design).
+ */
+export function diagnoseAll(source: string): SnilError[] {
+  return parseAll(source).errors;
 }
 
 /** Run SNIL source. Captures `onyesha` output; never throws — errors come back in Kiswahili. */

@@ -2,10 +2,10 @@
 // Kiswahili: edit, press Endesha, see output. Consumes only the public API from
 // src/lang (parse/run/toPython); never reimplements the language.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { run, toPython, toJS, createReplSession } from './lang';
+import { run, toPython, toJS, createReplSession, diagnoseAll } from './lang';
 import { combineResolvers, standardRegistryResolver } from './lang';
 import type { SnilError } from './lang';
-import { formatError } from './lang/diagnose';
+import { formatError, formatErrors } from './lang/diagnose';
 import { formatSnil } from './lang/format';
 import { Darasa } from './Darasa';
 import { Karibu } from './Karibu';
@@ -563,6 +563,8 @@ function Playground() {
   const [hai, setHai] = useState<string>(''); // mfano ulio hai (sidebar)
   const [output, setOutput] = useState<string>('');
   const [kosa, setKosa] = useState<SnilError | null>(null);
+  // Makosa mengi ya kisintaksia (kupima/kuchanganua) yaliyokusanywa kabla ya kuendesha.
+  const [makosaMengi, setMakosaMengi] = useState<string>('');
   const [python, setPython] = useState<string>('');
   const [pythonKosa, setPythonKosa] = useState<string>('');
   const [js, setJs] = useState<string>('');
@@ -611,6 +613,16 @@ function Playground() {
     setKichupo('matokeo');
     setImeendeshwa(true);
     setPaneMobile('matokeo'); // kwenye simu, onyesha tokeo mara baada ya kuendesha
+    // Kwanza: kusanya makosa YOTE ya kisintaksia (kupima/kuchanganua). Kama yapo,
+    // onyesha yote pamoja badala ya kuendesha — mwanafunzi aone makosa yote kwa mara moja.
+    const makosa = diagnoseAll(code);
+    if (makosa.length > 0) {
+      setMakosaMengi(formatErrors(code, makosa));
+      setOutput('');
+      setKosa(null);
+      return;
+    }
+    setMakosaMengi('');
     try {
       const res = run(code, {
         uliza: (swali) => window.prompt(swali) ?? '',
@@ -660,6 +672,7 @@ function Playground() {
   function safishaMatokeo() {
     setOutput('');
     setKosa(null);
+    setMakosaMengi('');
     setPython('');
     setPythonKosa('');
     setJs('');
@@ -914,7 +927,9 @@ function Playground() {
 
             {kichupo === 'matokeo' ? (
               <div className="paneli-eneo">
-                {kosa ? (
+                {makosaMengi ? (
+                  <pre className="kosa">{makosaMengi}</pre>
+                ) : kosa ? (
                   <pre className="kosa">{formatError(code, kosa)}</pre>
                 ) : output ? (
                   <pre className="matokeo">{output}</pre>

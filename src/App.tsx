@@ -234,6 +234,148 @@ function pakuaWorkspace(): Faili[] {
   return failiAwali();
 }
 
+// --- Kibodi ya SNIL: vitufe vya kugusa kuingiza maneno/alama (simu & tablet) ---
+// Huingiza maandishi mahali mshale ulipo kwenye <textarea> iliyo hai, kisha
+// inarudisha mshale mahali pazuri (mfano: ndani ya alama mbili za nukuu).
+function ingizaKwenyeMshale(
+  ta: HTMLTextAreaElement | null,
+  ins: string,
+  weka: (mpya: string) => void,
+  nyumaCaret = 0,
+) {
+  if (!ta) return;
+  const start = ta.selectionStart;
+  const end = ta.selectionEnd;
+  const next = ta.value.slice(0, start) + ins + ta.value.slice(end);
+  weka(next);
+  const pos = start + ins.length - nyumaCaret;
+  requestAnimationFrame(() => {
+    ta.focus();
+    try {
+      ta.setSelectionRange(pos, pos);
+    } catch {
+      /* baadhi ya vivinjari hukataa setSelectionRange — si hatari */
+    }
+  });
+}
+
+type Kichupe = { l: string; ins: string; back?: number };
+const KIBODI_MANENO: Kichupe[] = [
+  { l: 'onyesha', ins: 'onyesha ' },
+  { l: 'weka', ins: 'weka ' },
+  { l: 'kuwa', ins: 'kuwa ' },
+  { l: 'ikiwa', ins: 'ikiwa ' },
+  { l: 'basi', ins: 'basi' },
+  { l: 'vinginevyo', ins: 'vinginevyo' },
+  { l: 'mwisho', ins: 'mwisho' },
+  { l: 'kwa kila', ins: 'kwa kila ' },
+  { l: 'katika', ins: 'katika ' },
+  { l: 'kutoka', ins: 'kutoka ' },
+  { l: 'hadi', ins: 'hadi ' },
+  { l: 'wakati', ins: 'wakati ' },
+  { l: 'kazi', ins: 'kazi ' },
+  { l: 'rudisha', ins: 'rudisha ' },
+  { l: 'leta', ins: 'leta ' },
+  { l: 'ongeza', ins: 'ongeza ' },
+  { l: 'kwenye', ins: 'kwenye ' },
+  { l: 'uliza', ins: 'uliza ' },
+  { l: 'na', ins: 'na ' },
+  { l: 'au', ins: 'au ' },
+  { l: 'idadi()', ins: 'idadi()', back: 1 },
+];
+const KIBODI_ALAMA: Kichupe[] = [
+  { l: '"', ins: '""', back: 1 },
+  { l: '( )', ins: '()', back: 1 },
+  { l: '[ ]', ins: '[]', back: 1 },
+  { l: '{ }', ins: '{}', back: 1 },
+  { l: '+', ins: ' + ' },
+  { l: '−', ins: ' - ' },
+  { l: '×', ins: ' * ' },
+  { l: '÷', ins: ' / ' },
+  { l: '%', ins: ' % ' },
+  { l: '=', ins: ' = ' },
+  { l: '==', ins: ' == ' },
+  { l: '>', ins: ' > ' },
+  { l: '<', ins: ' < ' },
+  { l: '.', ins: '.' },
+  { l: ':', ins: ': ' },
+  { l: ',', ins: ', ' },
+];
+
+function Kibodi({
+  onIngiza,
+}: {
+  onIngiza: (ins: string, back?: number) => void;
+}) {
+  return (
+    <div className="kibodi" role="toolbar" aria-label="Vitufe vya maneno na alama za SNIL">
+      <div className="kibodi-kundi">
+        {KIBODI_MANENO.map((k) => (
+          <button
+            key={k.l}
+            type="button"
+            className="kibodi-kitufe"
+            // onMouseDown + preventDefault huzuia textarea kupoteza umakini (focus),
+            // hivyo selectionStart inabaki sahihi na maandishi yanaingia mahali pa mshale.
+            onMouseDown={(e) => {
+              e.preventDefault();
+              onIngiza(k.ins, k.back);
+            }}
+          >
+            {k.l}
+          </button>
+        ))}
+      </div>
+      <div className="kibodi-kundi kibodi-alama">
+        {KIBODI_ALAMA.map((k) => (
+          <button
+            key={k.l}
+            type="button"
+            className="kibodi-kitufe kibodi-sym"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              onIngiza(k.ins, k.back);
+            }}
+          >
+            {k.l}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Mhariri mwerevu: Tab huingiza nafasi 4; Enter hubeba mzingo wa mstari uliopita
+// na huongeza mzingo baada ya mstari unaofungua block (basi/vinginevyo/kazi/kwa/wakati).
+function bonyezaMhariri(
+  e: React.KeyboardEvent<HTMLTextAreaElement>,
+  weka: (mpya: string) => void,
+) {
+  const ta = e.currentTarget;
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    ingizaKwenyeMshale(ta, '    ', weka);
+    return;
+  }
+  if (e.key === 'Enter') {
+    const start = ta.selectionStart;
+    if (start !== ta.selectionEnd) return; // kuna uteuzi — acha tabia ya kawaida
+    const value = ta.value;
+    const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+    const curLine = value.slice(lineStart, start);
+    const indent = (curLine.match(/^[ \t]*/) ?? [''])[0];
+    const trimmed = curLine.trim();
+    const inafungua =
+      trimmed.endsWith('basi') ||
+      trimmed === 'vinginevyo' ||
+      /^kazi\b/.test(trimmed) ||
+      /^kwa\b/.test(trimmed) ||
+      /^wakati\b/.test(trimmed);
+    e.preventDefault();
+    ingizaKwenyeMshale(ta, '\n' + indent + (inafungua ? '    ' : ''), weka);
+  }
+}
+
 export function App() {
   const [modi, setModi] = useState<Modi>('karibu');
   return (
@@ -382,6 +524,11 @@ function Jaribio() {
             );
           })}
         </div>
+        <Kibodi
+          onIngiza={(ins, back) =>
+            ingizaKwenyeMshale(ingizoRef.current, ins, setMstari, back)
+          }
+        />
         <div className="repl-ingizo">
           <span className="repl-prompt" aria-hidden="true">›</span>
           <textarea
@@ -421,6 +568,9 @@ function Playground() {
   const [jsKosa, setJsKosa] = useState<string>('');
   const [kichupo, setKichupo] = useState<Kichupo>('matokeo');
   const [imeendeshwa, setImeendeshwa] = useState<boolean>(false);
+  const [mifanoWazi, setMifanoWazi] = useState<boolean>(false); // droo ya pembeni (simu)
+  const [paneMobile, setPaneMobile] = useState<'mhariri' | 'matokeo'>('mhariri');
+  const codeRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Faili iliyo hai sasa (kinga: kama index imepita mpaka, rudi 0).
   const idx = haiFaili < faili.length ? haiFaili : 0;
@@ -457,6 +607,7 @@ function Playground() {
   function endesha() {
     setKichupo('matokeo');
     setImeendeshwa(true);
+    setPaneMobile('matokeo'); // kwenye simu, onyesha tokeo mara baada ya kuendesha
     try {
       const res = run(code, {
         uliza: (swali) => window.prompt(swali) ?? '',
@@ -473,6 +624,7 @@ function Playground() {
 
   function onyeshaPython() {
     setKichupo('python');
+    setPaneMobile('matokeo');
     try {
       setPython(toPython(code, somaModuli));
       setPythonKosa('');
@@ -484,6 +636,7 @@ function Playground() {
 
   function onyeshaJS() {
     setKichupo('js');
+    setPaneMobile('matokeo');
     try {
       setJs(toJS(code, somaModuli));
       setJsKosa('');
@@ -552,11 +705,21 @@ function Playground() {
     setCode(m.chanzo);
     setHai(id);
     safishaMatokeo();
+    setMifanoWazi(false); // funga droo baada ya kuchagua (simu)
+    setPaneMobile('mhariri');
   }
 
   return (
     <div className="snil-app">
       <header className="snil-top">
+        <button
+          className="snil-menu"
+          aria-label="Fungua mifano na maneno-msingi"
+          aria-expanded={mifanoWazi}
+          onClick={() => setMifanoWazi((w) => !w)}
+        >
+          ☰
+        </button>
         <div className="snil-brand">
           <span className="snil-mark" aria-hidden="true" />
           <div>
@@ -581,7 +744,14 @@ function Playground() {
       </header>
 
       <div className="snil-body">
-        <aside className="snil-side">
+        {mifanoWazi && (
+          <div
+            className="snil-side-backdrop"
+            aria-hidden="true"
+            onClick={() => setMifanoWazi(false)}
+          />
+        )}
+        <aside className={'snil-side' + (mifanoWazi ? ' wazi' : '')}>
           <section>
             <h2>Mifano</h2>
             <ul className="mifano">
@@ -612,7 +782,25 @@ function Playground() {
           </section>
         </aside>
 
-        <main className="snil-main">
+        <main className={'snil-main pane-' + paneMobile}>
+          <div className="snil-pane-switch" role="tablist" aria-label="Onyesha">
+            <button
+              role="tab"
+              aria-selected={paneMobile === 'mhariri'}
+              className={paneMobile === 'mhariri' ? 'hai' : ''}
+              onClick={() => setPaneMobile('mhariri')}
+            >
+              Mhariri
+            </button>
+            <button
+              role="tab"
+              aria-selected={paneMobile === 'matokeo'}
+              className={paneMobile === 'matokeo' ? 'hai' : ''}
+              onClick={() => setPaneMobile('matokeo')}
+            >
+              Matokeo
+            </button>
+          </div>
           <section className="mhariri">
             <div className="faili-bar" role="tablist" aria-label="Faili">
               {faili.map((f, i) => (
@@ -677,6 +865,7 @@ function Playground() {
                 + Faili
               </button>
             </div>
+            <Kibodi onIngiza={(ins, back) => ingizaKwenyeMshale(codeRef.current, ins, setCode, back)} />
             <div className="mhariri-eneo">
               <div className="gutter" aria-hidden="true">
                 {Array.from({ length: mistari }, (_, i) => (
@@ -684,10 +873,15 @@ function Playground() {
                 ))}
               </div>
               <textarea
+                ref={codeRef}
                 className="code"
                 value={code}
                 spellCheck={false}
+                autoCapitalize="off"
+                autoCorrect="off"
+                autoComplete="off"
                 onChange={(e) => setCode(e.target.value)}
+                onKeyDown={(e) => bonyezaMhariri(e, setCode)}
                 aria-label="Mhariri wa SNIL"
               />
             </div>

@@ -1054,6 +1054,48 @@ body {
   margin-right: auto;
 }
 
+/* ---------- Kibodi ya SNIL (token keypad) ---------- */
+.kibodi {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 7px 10px;
+  background: #241f18;
+  border-bottom: 1px solid #3a3528;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+.kibodi-kundi { display: flex; gap: 6px; flex: 0 0 auto; }
+.kibodi-alama { border-left: 1px solid #3a3528; padding-left: 12px; }
+.kibodi-kitufe {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  white-space: nowrap;
+  color: #d8cdb3;
+  background: #322c22;
+  border: 1px solid #45402f;
+  border-radius: 7px;
+  padding: 6px 10px;
+  cursor: pointer;
+  flex: 0 0 auto;
+  transition: border-color .12s ease, color .12s ease, background .12s ease;
+}
+.kibodi-kitufe:hover { border-color: var(--gold); color: var(--code-ink); }
+.kibodi-kitufe:active { background: #3d3528; }
+.kibodi-sym { color: var(--gold); font-weight: 700; min-width: 34px; text-align: center; }
+
+/* Hamburger + pane switch: visible on small screens only (set in media query) */
+.snil-menu { display: none; }
+.snil-pane-switch { display: none; }
+
+/* ---------- Tablet ---------- */
+@media (min-width: 761px) and (max-width: 1024px) {
+  .snil-body { grid-template-columns: 208px 1fr; }
+  .snil-main { padding: 13px; gap: 12px; }
+  .snil-side { padding: 16px 13px; }
+}
+
 /* ---------- Mobile ---------- */
 @media (max-width: 760px) {
   .snil-modi { flex-wrap: wrap; justify-content: center; }
@@ -1073,15 +1115,80 @@ body {
   }
   .cheti { padding: 28px 20px 22px; }
   .cheti-chini { flex-direction: column; gap: 6px; }
-  .snil-side {
-    border-right: none;
-    border-bottom: 1px solid var(--sand-line);
-    max-height: 200px;
+
+  /* Hamburger toggles the examples drawer */
+  .snil-menu {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+    line-height: 1;
+    background: transparent;
+    border: 1.5px solid rgba(243, 235, 220, 0.4);
+    color: var(--sand-soft);
+    border-radius: 9px;
+    padding: 6px 11px;
+    cursor: pointer;
+    flex: none;
   }
-  .snil-main { grid-template-rows: 1fr 1fr; }
+
+  /* Sidebar becomes a slide-over drawer (no longer steals editor height) */
+  .snil-side {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: 84%;
+    max-width: 330px;
+    max-height: none;
+    z-index: 40;
+    border-right: 1px solid var(--sand-line);
+    border-bottom: none;
+    transform: translateX(-100%);
+    transition: transform .22s ease;
+    box-shadow: 0 0 48px -10px rgba(0, 0, 0, 0.55);
+  }
+  .snil-side.wazi { transform: none; }
+  .snil-side-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 35;
+    background: rgba(20, 16, 10, 0.45);
+  }
+
+  /* Editor / output become one full-height pane, toggled by the switch */
+  .snil-pane-switch { display: flex; gap: 6px; }
+  .snil-pane-switch button {
+    flex: 1;
+    font: inherit;
+    font-weight: 650;
+    font-size: 13px;
+    border: 1px solid var(--sand-line);
+    background: var(--sand-soft);
+    color: var(--ink-soft);
+    border-radius: 9px;
+    padding: 9px;
+    cursor: pointer;
+  }
+  .snil-pane-switch button.hai {
+    background: var(--green);
+    color: var(--sand-soft);
+    border-color: var(--green);
+  }
+  .snil-main {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .snil-main .mhariri, .snil-main .paneli { flex: 1; min-height: 0; }
+  .snil-main.pane-mhariri .paneli { display: none; }
+  .snil-main.pane-matokeo .mhariri { display: none; }
+
   .snil-top { flex-wrap: wrap; }
   .snil-actions { width: 100%; }
-  .snil-actions .btn { flex: 1; }
+  .snil-actions .btn { flex: 1; min-width: 0; }
+
+  /* 16px prevents iOS Safari from zooming when the editor gets focus */
+  .code, .repl-code { font-size: 16px; }
+  .kibodi-kitufe { padding: 8px 12px; font-size: 13.5px; }
 }
 
 /* ---------- ErrorBoundary fallback ---------- */

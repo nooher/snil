@@ -1,6 +1,6 @@
 // SNIL service worker — network-first with offline fallback for the app shell.
 // Versioned cache name: bump SW_VERSION on each release to evict stale shells.
-const SW_VERSION = 'snil-v1';
+const SW_VERSION = 'snil-v2';
 const CACHE = `snil-shell-${SW_VERSION}`;
 
 // Best-effort precache of the app shell. Built asset URLs are hashed and unknown

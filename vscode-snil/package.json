@@ -1,0 +1,42 @@
+{
+  "name": "snil",
+  "displayName": "SNIL — Kiswahili",
+  "description": "Syntax highlighting and editor support for SNIL, the sovereign Kiswahili programming language. Part of the SNIL flagship by Laetoli.",
+  "version": "0.1.0",
+  "publisher": "laetoli",
+  "license": "SEE LICENSE IN ../LICENSE",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "keywords": [
+    "snil",
+    "kiswahili",
+    "swahili",
+    "laetoli"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "snil",
+        "aliases": [
+          "SNIL",
+          "Kiswahili"
+        ],
+        "extensions": [
+          ".snil"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "snil",
+        "scopeName": "source.snil",
+        "path": "./syntaxes/snil.tmLanguage.json"
+      }
+    ]
+  }
+}

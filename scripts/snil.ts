@@ -21,6 +21,7 @@ register('./ts_resolver.ts', import.meta.url);
 const { run, toPython, SnilError } = await import('../src/lang/index.ts');
 const { formatError } = await import('../src/lang/diagnose.ts');
 const { nodeIO } = await import('../src/lang/node_io.ts');
+const { formatSnil } = await import('../src/lang/format.ts');
 
 const TOLEO = 'SNIL 0.1';
 
@@ -29,12 +30,14 @@ const MSAADA = `SNIL — lugha ya programu ya Kiswahili (na Laetoli)
 Matumizi:
   snil endesha <faili.snil>                    Tekeleza programu ya SNIL
   snil tengeneza <faili.snil> [--toka out.py]  Tafsiri SNIL kuwa Python
+  snil nadhifu <faili.snil> [--badili]         Nadhifisha mpangilio wa SNIL
   snil msaada                                  Onyesha ujumbe huu
   snil --toleo                                 Onyesha toleo la SNIL
 
 Mifano:
   snil endesha examples/habari.snil
   snil tengeneza examples/hesabu.snil --toka hesabu.py
+  snil nadhifu examples/duka.snil --badili
 `;
 
 /** Read a source file; on failure print a Kiswahili error to stderr + exit 1. */
@@ -112,6 +115,61 @@ function amriTengeneza(args: string[]): void {
   }
 }
 
+function amriNadhifu(args: string[]): void {
+  let path: string | undefined;
+  let toka: string | undefined;
+  let badili = false;
+  const ulikuwepoToka = args.includes('--toka');
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--toka') {
+      toka = args[i + 1];
+      i++;
+    } else if (args[i] === '--badili') {
+      badili = true;
+    } else if (!path) {
+      path = args[i];
+    }
+  }
+  if (!path) {
+    process.stderr.write('Hitilafu: taja faili la kunadhifisha. Mfano: snil nadhifu programu.snil\n');
+    process.exit(1);
+  }
+  if (ulikuwepoToka && toka === undefined) {
+    process.stderr.write('Hitilafu: "--toka" inahitaji njia ya faili la matokeo.\n');
+    process.exit(1);
+  }
+  const source = somaChanzo(path);
+  let nadhifu: string;
+  try {
+    nadhifu = formatSnil(source);
+  } catch (e) {
+    const err = e instanceof SnilError
+      ? e
+      : new SnilError(String((e as Error)?.message ?? e), 0, 'kuchanganua');
+    process.stderr.write(formatError(source, err) + '\n');
+    process.exit(1);
+  }
+  if (toka) {
+    try {
+      fs.writeFileSync(toka, nadhifu, 'utf-8');
+    } catch (e) {
+      process.stderr.write(`Hitilafu: imeshindwa kuandika "${toka}" (${String((e as Error)?.message ?? e)}).\n`);
+      process.exit(1);
+    }
+    process.stdout.write(`Imenadhifishwa: ${toka}\n`);
+  } else if (badili) {
+    try {
+      fs.writeFileSync(path, nadhifu, 'utf-8');
+    } catch (e) {
+      process.stderr.write(`Hitilafu: imeshindwa kuandika "${path}" (${String((e as Error)?.message ?? e)}).\n`);
+      process.exit(1);
+    }
+    process.stdout.write(`Imenadhifishwa: ${path}\n`);
+  } else {
+    process.stdout.write(nadhifu);
+  }
+}
+
 function main(): void {
   // Quiet the experimental-loader warning so CLI output stays clean Kiswahili.
   void pathToFileURL;
@@ -132,6 +190,10 @@ function main(): void {
   }
   if (amri === 'tengeneza') {
     amriTengeneza(argv.slice(1));
+    return;
+  }
+  if (amri === 'nadhifu') {
+    amriNadhifu(argv.slice(1));
     return;
   }
 

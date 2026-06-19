@@ -1,0 +1,78 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "SNIL",
+  "scopeName": "source.snil",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#constants" },
+    { "include": "#control" },
+    { "include": "#declaration" },
+    { "include": "#builtins" },
+    { "include": "#operators-word" },
+    { "include": "#function-call" },
+    { "include": "#operators-symbol" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.block.snil",
+          "begin": "###",
+          "end": "###"
+        },
+        {
+          "name": "comment.line.number-sign.snil",
+          "begin": "#",
+          "end": "$"
+        }
+      ]
+    },
+    "strings": {
+      "name": "string.quoted.double.snil",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape.snil",
+          "match": "\\\\."
+        }
+      ]
+    },
+    "numbers": {
+      "name": "constant.numeric.snil",
+      "match": "\\b[0-9]+(\\.[0-9]+)?\\b"
+    },
+    "constants": {
+      "name": "constant.language.snil",
+      "match": "\\b(kweli|si_kweli|tupu)\\b"
+    },
+    "control": {
+      "name": "keyword.control.snil",
+      "match": "\\b(ikiwa|basi|vinginevyo|mwisho|kwa|kila|katika|kutoka|hadi|wakati|rudisha|jaribu|kosa)\\b"
+    },
+    "declaration": {
+      "name": "keyword.other.snil",
+      "match": "\\b(weka|kuwa|kazi|leta|onyesha|uliza|soma|andika|ongeza|ondoa|kwenye)\\b"
+    },
+    "builtins": {
+      "name": "support.function.snil",
+      "match": "\\b(idadi|namba|maandishi|mzunguko|kamili|jumla|wastani|kiwango_cha_juu|kiwango_cha_chini|mzizi|kipeo|herufi_kubwa|herufi_ndogo|unganisha|gawanya|ina|badilisha|ondoa_nafasi|panga|geuza|sasa|leo|mwaka|mwezi|siku)\\b"
+    },
+    "operators-word": {
+      "name": "keyword.operator.snil",
+      "match": "\\b(na|au|sio)\\b"
+    },
+    "operators-symbol": {
+      "name": "keyword.operator.snil",
+      "match": "(==|!=|<=|>=|=|<|>|\\+|-|\\*|/|%)"
+    },
+    "function-call": {
+      "match": "([A-Za-z_][A-Za-z0-9_]*)\\s*(?=\\()",
+      "captures": {
+        "1": { "name": "entity.name.function.snil" }
+      }
+    }
+  }
+}

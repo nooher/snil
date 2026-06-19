@@ -1,0 +1,27 @@
+{
+  "comments": {
+    "lineComment": "#",
+    "blockComment": ["###", "###"]
+  },
+  "brackets": [
+    ["(", ")"],
+    ["[", "]"],
+    ["{", "}"]
+  ],
+  "autoClosingPairs": [
+    { "open": "(", "close": ")" },
+    { "open": "[", "close": "]" },
+    { "open": "{", "close": "}" },
+    { "open": "\"", "close": "\"", "notIn": ["string", "comment"] }
+  ],
+  "surroundingPairs": [
+    ["(", ")"],
+    ["[", "]"],
+    ["{", "}"],
+    ["\"", "\""]
+  ],
+  "indentationRules": {
+    "increaseIndentPattern": "(\\bbasi\\s*$)|(^\\s*kwa\\s+kila\\b.*\\b(katika|hadi)\\b.*$)|(^\\s*wakati\\b.*$)|(^\\s*kazi\\b.*$)|(^\\s*jaribu\\s*$)|(^\\s*vinginevyo\\s*$)|(^\\s*kosa\\s*$)",
+    "decreaseIndentPattern": "^\\s*(mwisho|vinginevyo|kosa)\\b"
+  }
+}

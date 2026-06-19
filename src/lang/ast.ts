@@ -29,8 +29,20 @@ export type BinOp = '+' | '-' | '*' | '/' | '%' | '==' | '!=' | '<' | '>' | '<='
 /** Unary op. op ∈ -  sio  */
 export interface Unary extends Node { kind: 'Unary'; op: '-' | 'sio'; operand: Expr; }
 
-/** Function call: salamu("Asha") — also builtins like idadi(x). */
+/** Function call by NAME: salamu("Asha") — also builtins like idadi(x). The
+ *  callee is a bare identifier (named kazi, a variable holding a function value,
+ *  or a builtin). Application of a non-name function VALUE uses `Apply`. */
 export interface Call extends Node { kind: 'Call'; callee: string; args: Expr[]; }
+
+/** Application of a function VALUE produced by an arbitrary expression:
+ *  (kazi(x) rudisha x mwisho)(3), getFn()(3), etc. `fn` evaluates to a callable
+ *  (a user function or a builtin). Name calls stay `Call` for the fast path. */
+export interface Apply extends Node { kind: 'Apply'; fn: Expr; args: Expr[]; }
+
+/** Anonymous function expression (lambda): kazi(params) … rudisha … mwisho used
+ *  as a VALUE. It captures the enclosing scope (a closure). A NAMED function is
+ *  still the `FuncDecl` statement; this is its expression form. */
+export interface FuncExpr extends Node { kind: 'FuncExpr'; params: string[]; body: Stmt[]; }
 
 /** List/dict index: orodha[0]  (bracket access). */
 export interface Index extends Node { kind: 'Index'; target: Expr; index: Expr; }
@@ -40,7 +52,7 @@ export interface Member extends Node { kind: 'Member'; target: Expr; name: strin
 
 export type Expr =
   | NumberLit | StringLit | TemplateString | BoolLit | NullLit | ListLit | DictLit
-  | Ident | Binary | Unary | Call | Index | Member;
+  | Ident | Binary | Unary | Call | Apply | FuncExpr | Index | Member;
 
 // ───────────────────────── Statements ─────────────────────────
 export interface VarDecl extends Node { kind: 'VarDecl'; name: string; value: Expr; }        // weka X kuwa <e>

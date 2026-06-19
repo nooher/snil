@@ -1,0 +1,18 @@
+# ramani — kuongeza maradufu kila kipengele cha orodha (map)
+# Inaonyesha: kazi yenye jina kama thamani + kazi isiyo na jina (lambda).
+
+kazi maradufu(x)
+    rudisha x * 2
+mwisho
+
+weka seti kuwa [1, 2, 3, 4, 5]
+
+# Pitisha kazi YENYE JINA kama hoja.
+onyesha ramani(seti, maradufu)
+
+# Pitisha kazi ISIYO NA JINA (lambda) moja kwa moja.
+onyesha ramani(seti, kazi(x) rudisha x + 100 mwisho)
+
+# Funga juu ya kigeu cha nje (closure).
+weka nyongeza kuwa 10
+onyesha ramani(seti, kazi(x) rudisha x + nyongeza mwisho)

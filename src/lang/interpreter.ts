@@ -11,7 +11,7 @@ import type {
 } from './ast';
 import type { SnilIO } from './runtime';
 import { SnilError, Makosa } from './errors';
-import { STDLIB, BUILTINS, type NativeFn } from './stdlib';
+import { STDLIB, BUILTINS, type NativeFn, type SnilApply } from './stdlib';
 import { tokenize } from './lexer';
 import { parse } from './parser';
 
@@ -29,7 +29,7 @@ export type SnilDict = Map<string, SnilValue>;
 
 export interface SnilFunction {
   __snilFn: true;
-  name: string;
+  name: string;       // declared name, or '<kazi>' for an anonymous lambda
   params: string[];
   body: Stmt[];
   closure: Environment;
@@ -417,6 +417,23 @@ function evaluate(expr: Expr, env: Environment, ctx: Ctx): SnilValue {
     case 'Unary': return evalUnary(expr.op, evaluate(expr.operand, env, ctx), expr.line);
     case 'Binary': return evalBinary(expr, env, ctx);
     case 'Call': return evalCall(expr, env, ctx);
+    case 'FuncExpr': {
+      // Anonymous function → a closure capturing the CURRENT environment.
+      const fn: SnilFunction = {
+        __snilFn: true,
+        name: '<kazi>',
+        params: expr.params,
+        body: expr.body,
+        closure: env,
+      };
+      return fn;
+    }
+    case 'Apply': {
+      // Apply a function VALUE produced by an arbitrary expression.
+      const callee = evaluate(expr.fn, env, ctx);
+      const args = expr.args.map((a) => evaluate(a, env, ctx));
+      return applyValue(callee, args, expr.line, ctx);
+    }
     case 'Index': {
       const target = evaluate(expr.target, env, ctx);
       const index = evaluate(expr.index, env, ctx);
@@ -521,10 +538,30 @@ function evalCall(
   // 2) Builtins / imported stdlib functions.
   const builtin = ctx.builtins.get(expr.callee);
   if (builtin) {
-    return builtin(args, ctx.io) as SnilValue;
+    return callBuiltin(builtin, args, ctx) as SnilValue;
   }
 
   throw Makosa.kaziHaijulikani(expr.callee, expr.line);
+}
+
+/** Run a native builtin, handing it an `apply` callback so higher-order builtins
+ *  (ramani/chuja/punguza) can invoke a passed-in function value. */
+function callBuiltin(fn: NativeFn, args: SnilValue[], ctx: Ctx): SnilValue {
+  const apply: SnilApply = (callable, callArgs) =>
+    applyValue(callable as SnilValue, callArgs as SnilValue[], 0, ctx);
+  return fn(args, ctx.io, apply) as SnilValue;
+}
+
+/** Apply ANY callable value — a user SnilFunction or a native builtin. Used by
+ *  `Apply` nodes and by the `apply` callback handed to higher-order builtins. */
+function applyValue(callee: SnilValue, args: SnilValue[], line: number, ctx: Ctx): SnilValue {
+  if (isSnilFunction(callee)) {
+    return callFunction(callee, args, line, ctx);
+  }
+  if (typeof callee === 'function') {
+    return callBuiltin(callee as NativeFn, args, ctx);
+  }
+  throw Makosa.ainaMbaya('Thamani hii si kazi; haiwezi kuitwa.', line);
 }
 
 function callFunction(fn: SnilFunction, args: SnilValue[], line: number, ctx: Ctx): SnilValue {

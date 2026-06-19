@@ -1,0 +1,13 @@
+# punguza — kukunja orodha kuwa thamani moja (reduce / fold)
+
+weka seti kuwa [1, 2, 3, 4, 5]
+
+# Jumla ya orodha.
+onyesha punguza(seti, kazi(jumla, x) rudisha jumla + x mwisho, 0)
+
+# Zidisha vyote (factorial-style product).
+onyesha punguza(seti, kazi(zao, x) rudisha zao * x mwisho, 1)
+
+# Unganisha kuwa maandishi.
+weka maneno kuwa ["a", "b", "c"]
+onyesha punguza(maneno, kazi(matokeo, herufi) rudisha matokeo + herufi mwisho, "")

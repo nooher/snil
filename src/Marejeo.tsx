@@ -15,7 +15,7 @@ const MANENO: { neno: string; maana: string }[] = [
   { neno: 'kwa kila … katika', maana: 'pitia kila kitu katika orodha' },
   { neno: 'kwa kila … kutoka … hadi', maana: 'pitia namba (mwisho ujumuishwe)' },
   { neno: 'wakati', maana: 'rudia maadamu sharti ni kweli (while)' },
-  { neno: 'kazi', maana: 'tengeneza kazi (function)' },
+  { neno: 'kazi', maana: 'tengeneza kazi (function) — yenye jina au isiyo na jina (lambda)' },
   { neno: 'rudisha', maana: 'rudisha thamani kutoka kwa kazi' },
   { neno: 'jaribu … kosa', maana: 'shika hitilafu (try … catch)' },
   { neno: 'leta', maana: 'leta moduli ya maktaba' },
@@ -46,6 +46,7 @@ const WAENDESHAJI: { kiwango: string; alama: string; maana: string }[] = [
   { kiwango: '5', alama: '*  /  %', maana: 'zidisha / gawanya / baki (modulo)' },
   { kiwango: '6', alama: 'sio   -x', maana: 'kanusho na hasi (unary)' },
   { kiwango: '7 (juu)', alama: 'f(…)   x[…]   x.k', maana: 'wito, faharasa, kiungo' },
+  { kiwango: '8', alama: 'kazi(…) … mwisho', maana: 'kazi isiyo na jina (lambda) kama thamani' },
 ];
 
 // ---- miundo: control structures with tiny snippets ----
@@ -113,6 +114,22 @@ kosa
     onyesha "Si namba halali"
 mwisho`,
   },
+  {
+    kichwa: 'kazi za daraja la kwanza (function values + lambda)',
+    chanzo: `# kazi yenye jina ni THAMANI inayoweza kupitishwa
+kazi maradufu(x)
+    rudisha x * 2
+mwisho
+onyesha ramani([1, 2, 3], maradufu)
+
+# kazi ISIYO NA JINA (lambda) — hufunga mazingira (closure)
+weka nyongeza kuwa 10
+onyesha ramani([1, 2, 3], kazi(x) rudisha x + nyongeza mwisho)
+
+# hifadhi kazi kwenye kigeu kisha iite
+weka f kuwa kazi(x) rudisha x * x mwisho
+onyesha f(5)`,
+  },
 ];
 
 // ---- maktaba ya kawaida (stdlib) — exact list from GRAMMAR.md ----
@@ -122,6 +139,9 @@ const BUILTINS: { kazi: string; maana: string }[] = [
   { kazi: 'maandishi(x)', maana: 'geuza kuwa mfuatano wa maandishi wa SNIL' },
   { kazi: 'mzunguko(x)', maana: 'zungusha hadi namba kamili (nusu → juu)' },
   { kazi: 'kamili(x)', maana: 'thamani kamili / chanya (absolute)' },
+  { kazi: 'ramani(orodha, f)', maana: 'orodha mpya ya f(x) kwa kila x (map)' },
+  { kazi: 'chuja(orodha, f)', maana: 'vipengele ambapo f(x) ni kweli (filter)' },
+  { kazi: 'punguza(orodha, f, anza)', maana: 'kunja orodha kuwa thamani moja (reduce)' },
 ];
 
 const MODULI: { jina: string; leta: string; kazi: { kazi: string; maana: string }[] }[] = [

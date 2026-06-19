@@ -6,7 +6,7 @@ import type {
   Program, Stmt, Expr,
   VarDecl, Assign, Print, Input, If, ForEach, ForRange, While,
   FuncDecl, Return, Try, Import, ListAdd, ListRemove, FileWrite, FileRead, ExprStmt,
-  Binary, Unary, Call, Index, Member, Ident,
+  Binary, Unary, Call, Apply, FuncExpr, Index, Member, Ident,
 } from './ast';
 import { STDLIB } from './stdlib';
 import { SnilError } from './errors';
@@ -75,6 +75,31 @@ def _clamp(i, n):
     if i < 0: return 0
     if i > n: return n
     return i
+
+def _kweli(x):
+    # SNIL truthiness: False / None / 0 / "" / [] are falsy; else truthy.
+    if x is False or x is None:
+        return False
+    if x == 0 and isinstance(x, (int, float)) and not isinstance(x, bool):
+        return False
+    if x == "" :
+        return False
+    if isinstance(x, list) and len(x) == 0:
+        return False
+    return True
+
+# ── Higher-order builtins (ramani / chuja / punguza) — global, no leta ──
+def ramani(orodha, f):
+    return [f(_x) for _x in orodha]
+
+def chuja(orodha, f):
+    return [_x for _x in orodha if _kweli(f(_x))]
+
+def punguza(orodha, f, anza):
+    _acc = anza
+    for _x in orodha:
+        _acc = f(_acc, _x)
+    return _acc
 
 # ── Global builtins (no leta): namba, maandishi, mzunguko, kamili ──
 def namba(x):
@@ -263,6 +288,14 @@ function safeName(name: string): string {
 export function generatePython(program: Program, somaModuli?: import('./runtime').ModuleResolver): string {
   const out: string[] = [];
 
+  // Anonymous functions (FuncExpr) can't be a Python `lambda` (multi-statement
+  // bodies), so each is HOISTED to a uniquely-named `def` emitted immediately
+  // before the statement that uses it, and the expression references that name.
+  // Closures over outer variables work because the def is emitted in-place (same
+  // scope), so it sees the enclosing locals/globals.
+  let lambdaCounter = 0;
+  const lambdaName = new Map<FuncExpr, string>();
+
   function line(text: string, depth: number): void {
     out.push('    '.repeat(depth) + text);
   }
@@ -275,7 +308,70 @@ export function generatePython(program: Program, somaModuli?: import('./runtime'
     for (const s of stmts) emitStmt(s, depth);
   }
 
+  // Collect every FuncExpr reachable in an expression tree WITHOUT descending
+  // into a FuncExpr's own body (those nested lambdas are hoisted when that body's
+  // statements are emitted). Returns them in source order.
+  function funcExprsIn(e: Expr, acc: FuncExpr[]): void {
+    switch (e.kind) {
+      case 'FuncExpr': acc.push(e); return; // do NOT recurse into body here
+      case 'Binary': funcExprsIn(e.left, acc); funcExprsIn(e.right, acc); return;
+      case 'Unary': funcExprsIn(e.operand, acc); return;
+      case 'Call': for (const a of e.args) funcExprsIn(a, acc); return;
+      case 'Apply': funcExprsIn(e.fn, acc); for (const a of e.args) funcExprsIn(a, acc); return;
+      case 'Index': funcExprsIn(e.target, acc); funcExprsIn(e.index, acc); return;
+      case 'Member': funcExprsIn(e.target, acc); return;
+      case 'ListLit': for (const it of e.items) funcExprsIn(it, acc); return;
+      case 'DictLit': for (const en of e.entries) funcExprsIn(en.value, acc); return;
+      case 'TemplateString':
+        for (const p of e.parts) if (p.t === 'expr') funcExprsIn(p.expr, acc);
+        return;
+      default: return;
+    }
+  }
+
+  // Every expression a statement evaluates DIRECTLY (not via a child block).
+  function stmtExprs(s: Stmt): Expr[] {
+    switch (s.kind) {
+      case 'VarDecl': return [s.value];
+      case 'Assign': return [...lvalueExprs(s.target), s.value];
+      case 'Print': return [s.value];
+      case 'Input': return [s.prompt];
+      case 'If': return [s.cond];
+      case 'ForEach': return [s.iterable];
+      case 'ForRange': return [s.from, s.to];
+      case 'While': return [s.cond];
+      case 'Return': return s.value ? [s.value] : [];
+      case 'ListAdd': return [s.item, s.list];
+      case 'ListRemove': return [s.item, s.list];
+      case 'FileWrite': return [s.data, s.path];
+      case 'FileRead': return [s.path];
+      case 'ExprStmt': return [s.expr];
+      default: return [];
+    }
+  }
+
+  function lvalueExprs(target: Ident | Index | Member): Expr[] {
+    if (target.kind === 'Index') return [target.target, target.index];
+    if (target.kind === 'Member') return [target.target];
+    return [];
+  }
+
+  // Emit `def`s for FuncExprs used directly by this statement, in source order.
+  function hoistLambdas(s: Stmt, depth: number): void {
+    const found: FuncExpr[] = [];
+    for (const e of stmtExprs(s)) funcExprsIn(e, found);
+    for (const fx of found) {
+      if (lambdaName.has(fx)) continue;
+      const name = `_kazi_${lambdaCounter++}`;
+      lambdaName.set(fx, name);
+      const params = fx.params.map(safeName).join(', ');
+      line(`def ${name}(${params}):`, depth);
+      block(fx.body, depth + 1);
+    }
+  }
+
   function emitStmt(s: Stmt, depth: number): void {
+    hoistLambdas(s, depth);
     switch (s.kind) {
       case 'VarDecl': {
         const n = s as VarDecl;
@@ -449,6 +545,17 @@ export function generatePython(program: Program, somaModuli?: import('./runtime'
         return unary(e as Unary);
       case 'Call':
         return call(e as Call);
+      case 'Apply': {
+        const a = e as Apply;
+        const args = a.args.map(expr).join(', ');
+        return `(${expr(a.fn)})(${args})`;
+      }
+      case 'FuncExpr': {
+        // Reference the hoisted def emitted by hoistLambdas before this statement.
+        const name = lambdaName.get(e as FuncExpr);
+        if (!name) throw new Error('SNIL codegen: FuncExpr haijapandishwa (hoist) kabla ya matumizi.');
+        return name;
+      }
       case 'Index':
         return `${expr((e as Index).target)}[${expr((e as Index).index)}]`;
       case 'Member':

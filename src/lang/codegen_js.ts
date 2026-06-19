@@ -13,7 +13,7 @@ import type {
   Program, Stmt, Expr,
   VarDecl, Assign, Print, Input, If, ForEach, ForRange, While,
   FuncDecl, Return, Try, Import, ListAdd, ListRemove, FileWrite, FileRead, ExprStmt,
-  Binary, Unary, Call, Index, Member, Ident,
+  Binary, Unary, Call, Apply, FuncExpr, Index, Member, Ident,
 } from './ast';
 import { STDLIB } from './stdlib';
 import { SnilError } from './errors';
@@ -152,6 +152,22 @@ function _numList(args, fn) {
   return raw;
 }
 
+// ── Higher-order builtins (ramani / chuja / punguza) — global, no leta ──
+function ramani(orodha, f) {
+  if (!Array.isArray(orodha)) throw new Error('Kazi "ramani" inahitaji orodha.');
+  return orodha.map((x) => f(x));
+}
+function chuja(orodha, f) {
+  if (!Array.isArray(orodha)) throw new Error('Kazi "chuja" inahitaji orodha.');
+  return orodha.filter((x) => _kweli(f(x)));
+}
+function punguza(orodha, f, anza) {
+  if (!Array.isArray(orodha)) throw new Error('Kazi "punguza" inahitaji orodha.');
+  let acc = anza;
+  for (const x of orodha) acc = f(acc, x);
+  return acc;
+}
+
 // ── SNIL stdlib (leta hisabati / maandishi / orodha / muda / faili) ──
 const hisabati = {
   jumla: (...a) => _numList(a, "jumla").reduce((x, y) => x + y, 0),
@@ -262,6 +278,19 @@ export function generateJS(program: Program, somaModuli?: import('./runtime').Mo
 
   function block(stmts: Stmt[], depth: number): void {
     for (const s of stmts) emitStmt(s, depth);
+  }
+
+  // Anonymous function (FuncExpr) → an inline JS function expression. JS function
+  // expressions support multi-statement bodies and close over outer variables
+  // naturally, so no hoisting is needed (unlike Python). We render the body by
+  // capturing the lines emitStmt appends, then splicing them into one string.
+  function funcExpr(fx: FuncExpr): string {
+    const params = fx.params.map(safeName).join(', ');
+    const start = out.length;
+    block(fx.body, 1);
+    const bodyLines = out.splice(start); // remove what we just emitted
+    const body = bodyLines.join('\n');
+    return `(function (${params}) {\n${body}\n})`;
   }
 
   function emitStmt(s: Stmt, depth: number): void {
@@ -452,6 +481,13 @@ export function generateJS(program: Program, somaModuli?: import('./runtime').Mo
         return unary(e as Unary);
       case 'Call':
         return call(e as Call);
+      case 'Apply': {
+        const a = e as Apply;
+        const args = a.args.map(expr).join(', ');
+        return `(${expr(a.fn)})(${args})`;
+      }
+      case 'FuncExpr':
+        return funcExpr(e as FuncExpr);
       case 'Index':
         return `${expr((e as Index).target)}[${expr((e as Index).index)}]`;
       case 'Member':

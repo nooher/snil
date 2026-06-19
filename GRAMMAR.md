@@ -32,8 +32,8 @@ kila block.)
 4. `+` `-`
 5. `*` `/` `%`
 6. unary `sio` (not), unary `-`
-7. call `f(...)`, index `x[...]`, member `x.k`
-8. grouping `( ... )`
+7. call `f(...)`, **apply a function value** `(<expr>)(...)`, index `x[...]`, member `x.k`
+8. grouping `( ... )`, **anonymous function** `kazi(...) … mwisho`
 
 ## Statements
 ```
@@ -55,6 +55,17 @@ forEach     = "kwa" "kila" IDENT "katika" expr { statement } "mwisho"
 forRange    = "kwa" "kila" IDENT "kutoka" expr "hadi" expr { statement } "mwisho"   # inclusive
 while       = "wakati" expr { statement } "mwisho"
 funcDecl    = "kazi" IDENT "(" [ IDENT { "," IDENT } ] ")" { statement } "mwisho"
+            # NAMED function declaration (statement). The bare name `IDENT` is
+            # itself a VALUE — `kazi` are first-class, so `mraba` (a named kazi)
+            # can be passed as an argument.
+funcExpr    = "kazi" "(" [ IDENT { "," IDENT } ] ")" { statement } "mwisho"   # expression
+            # ANONYMOUS function (lambda) used as a VALUE — note: NO name after
+            # `kazi`. It is a closure capturing the enclosing scope. Used inline,
+            # e.g. `ramani(orodha, kazi(x) rudisha x * 2 mwisho)`.
+apply       = expr "(" [ expr { "," expr } ] ")"
+            # Apply a function VALUE: f(3) where f holds a kazi, or
+            # `(kazi(a, b) rudisha a + b mwisho)(4, 5)`. A bare-name call uses the
+            # existing `f(...)` form; any other callee expression is an application.
 return      = "rudisha" [ expr ]
 try         = "jaribu" { statement } "kosa" { statement } "mwisho"
 import      = "leta" IDENT
@@ -93,6 +104,16 @@ Tabia na maonyesho ni **sawasawa** kwa interpreter na codegen ya Python.
   katika muundo wa SNIL, `kweli`/`si_kweli`/`tupu`).
 - `mzunguko(x)` — zungusha hadi nambari kamili iliyo karibu (nusu → juu, mfano `2.5`→`3`).
 - `kamili(x)` — thamani kamili / chanya (absolute value).
+
+**Kazi za daraja-juu (higher-order — zinapokea KAZI kama hoja, hazihitaji `leta`):**
+SNIL ina kazi za daraja la kwanza: kazi yenye jina (`mraba`) ni THAMANI inayoweza
+kupitishwa, na `kazi(...) … mwisho` bila jina ni kazi isiyo na jina (lambda) inayofunga
+mazingira (closure). Tabia ni sawasawa kwa interpreter, Python codegen, na JS codegen.
+- `ramani(orodha, f)` — tengeneza orodha MPYA ya `f(x)` kwa kila `x` (map).
+- `chuja(orodha, f)` — orodha MPYA ya vipengele ambapo `f(x)` ni kweli (filter; ukweli
+  wa SNIL: `si_kweli`/`tupu`/`0`/`""`/orodha tupu ni si_kweli).
+- `punguza(orodha, f, anza)` — kunja orodha kuwa thamani moja; `f(mkusanyiko, x)` huitwa
+  kwa kila `x` ukianzia `anza` (reduce/fold).
 
 **Moduli `hisabati`** (`leta hisabati`):
 - `jumla(orodha)` — jumla. `wastani(orodha)` — wastani. `kiwango_cha_juu` / `kiwango_cha_chini`

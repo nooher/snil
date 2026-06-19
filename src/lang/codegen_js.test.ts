@@ -262,4 +262,23 @@ describe('SNIL → JavaScript string interpolation', () => {
     const bodyLine = js.split('\n').find((l) => l.startsWith('_onyesha('));
     expect(bodyLine).toBe('_onyesha("Habari Dunia");');
   });
+
+  it('an anonymous kazi compiles to an inline JS function expression', () => {
+    const js = toJS('onyesha ramani([1, 2], kazi(x) rudisha x * 2 mwisho)');
+    // JS function expressions support multi-statement bodies + closures, so the
+    // lambda is emitted inline (no hoisting) and passed straight to ramani.
+    expect(js).toContain('ramani([1, 2], (function (x) {');
+    expect(js).toContain('return (x * 2);');
+  });
+
+  it('runs ramani/chuja/punguza identical to the interpreter (via node)', () => {
+    const src = [
+      'onyesha ramani([1, 2, 3], kazi(x) rudisha x * x mwisho)',
+      'onyesha chuja([1, 2, 3, 4], kazi(x) rudisha x % 2 == 0 mwisho)',
+      'onyesha punguza([1, 2, 3, 4], kazi(a, x) rudisha a + x mwisho, 0)',
+    ].join('\n');
+    const want = '[1, 4, 9]\n[2, 4]\n10';
+    expect(runJS(src)).toBe(want);
+    expect(run(src).output.replace(/\s+$/, '')).toBe(want);
+  });
 });

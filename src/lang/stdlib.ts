@@ -8,7 +8,12 @@
 import type { SnilIO } from './runtime';
 import { SnilError, Makosa } from './errors';
 
-export type NativeFn = (args: unknown[], io: SnilIO) => unknown;
+/** Invoke a SNIL callable value (a user function or another builtin) with the
+ *  given evaluated args. Supplied by the interpreter to higher-order builtins
+ *  (ramani/chuja/punguza) so they can call a passed-in function value. */
+export type SnilApply = (fn: unknown, args: unknown[]) => unknown;
+
+export type NativeFn = (args: unknown[], io: SnilIO, apply?: SnilApply) => unknown;
 
 // ───────────────────────── small helpers ─────────────────────────
 function asNumber(v: unknown, fnName: string): number {
@@ -62,6 +67,23 @@ function snilEq(a: unknown, b: unknown): boolean {
       && snilEq((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k]));
   }
   return false;
+}
+
+/** SNIL truthiness — mirrors interpreter isTruthy (false/null/0/""/[] are falsy). */
+function snilTruthy(v: unknown): boolean {
+  if (v === false || v === null || v === undefined) return false;
+  if (v === 0) return false;
+  if (v === '') return false;
+  if (Array.isArray(v) && v.length === 0) return false;
+  return true;
+}
+
+/** Guard: a higher-order builtin must receive an apply callback + a callable. */
+function requireApply(apply: SnilApply | undefined, fnName: string): SnilApply {
+  if (!apply) {
+    throw Makosa.ainaMbaya(`Kazi "${fnName}" inahitaji kuitwa ndani ya mazingira ya SNIL.`, 0);
+  }
+  return apply;
 }
 
 /** Clamp a slice bound into [0, len] (negatives → 0; over → len). */
@@ -374,6 +396,28 @@ export const BUILTINS: Record<string, NativeFn> = {
   mzunguko: (args) => Math.round(asNumber(args[0], 'mzunguko')),
   // kamili(x) → thamani kamili / chanya (absolute value).
   kamili: (args) => Math.abs(asNumber(args[0], 'kamili')),
+
+  // ── Higher-order builtins (kazi-daraja-juu) — global, no `leta` ──
+  // ramani(orodha, f) → orodha MPYA ya f(x) kwa kila x (map).
+  ramani: (args, _io, apply) => {
+    const list = asList(args[0], 'ramani');
+    const call = requireApply(apply, 'ramani');
+    return list.map((x) => call(args[1], [x]));
+  },
+  // chuja(orodha, f) → orodha MPYA ya vipengele ambapo f(x) ni kweli (filter).
+  chuja: (args, _io, apply) => {
+    const list = asList(args[0], 'chuja');
+    const call = requireApply(apply, 'chuja');
+    return list.filter((x) => snilTruthy(call(args[1], [x])));
+  },
+  // punguza(orodha, f, anza) → kunja orodha na mkusanyiko ukianza `anza` (reduce/fold).
+  punguza: (args, _io, apply) => {
+    const list = asList(args[0], 'punguza');
+    const call = requireApply(apply, 'punguza');
+    let acc: unknown = args[2];
+    for (const x of list) acc = call(args[1], [acc, x]);
+    return acc;
+  },
 };
 
 // Full SNIL display string — mirrors interpreter displayString rules:

@@ -94,3 +94,24 @@ Je, kuna Asha? kweli
 Je, kuna Tatu? si_kweli
 AINAZNAT
 ```
+
+## ramani.snil
+```
+[2, 4, 6, 8, 10]
+[101, 102, 103, 104, 105]
+[11, 12, 13, 14, 15]
+```
+
+## chuja.snil
+```
+[2, 4, 6, 8, 10]
+[6, 7, 8, 9, 10]
+[jambo, habari, salama]
+```
+
+## punguza.snil
+```
+15
+120
+abc
+```

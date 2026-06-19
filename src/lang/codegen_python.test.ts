@@ -8,7 +8,7 @@ import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { toPython } from './index';
+import { toPython, run } from './index';
 import type { ModuleResolver } from './runtime';
 import { SnilError } from './errors';
 
@@ -228,5 +228,27 @@ describe('SNIL → Python string interpolation', () => {
     // The emitted program body (after the prelude) is just a plain print — no concat.
     const bodyLine = py.split('\n').find((l) => l.startsWith('print(_onyesha('));
     expect(bodyLine).toBe('print(_onyesha("Habari Dunia"))');
+  });
+
+  it('an anonymous kazi hoists to a uniquely-named def before its statement', () => {
+    const py = toPython('onyesha ramani([1, 2], kazi(x) rudisha x * 2 mwisho)');
+    // A FuncExpr can't be a Python lambda (multi-statement body); it is hoisted
+    // to a `def _kazi_N(...)` emitted BEFORE the statement that references it.
+    expect(py).toMatch(/def _kazi_0\(x\):/);
+    const defIdx = py.indexOf('def _kazi_0(');
+    const useIdx = py.indexOf('ramani([1, 2], _kazi_0)');
+    expect(defIdx).toBeGreaterThan(-1);
+    expect(useIdx).toBeGreaterThan(defIdx); // def precedes use
+  });
+
+  it('runs ramani/chuja/punguza identical to the interpreter (via python)', () => {
+    const src = [
+      'onyesha ramani([1, 2, 3], kazi(x) rudisha x * x mwisho)',
+      'onyesha chuja([1, 2, 3, 4], kazi(x) rudisha x % 2 == 0 mwisho)',
+      'onyesha punguza([1, 2, 3, 4], kazi(a, x) rudisha a + x mwisho, 0)',
+    ].join('\n');
+    const want = '[1, 4, 9]\n[2, 4]\n10';
+    if (HAVE_PY) expect(runPython(src)).toBe(want);
+    expect(run(src).output.replace(/\s+$/, '')).toBe(want);
   });
 });

@@ -11,7 +11,7 @@ import type {
   Program, Stmt, Expr,
   VarDecl, Assign, Print, Input, If, ForEach, ForRange, While,
   FuncDecl, Return, Try, Import, ListAdd, ListRemove, FileWrite, FileRead, ExprStmt,
-  Ident, Index, Member, Binary, Unary, Call,
+  Ident, Index, Member, Binary, Unary, Call, Apply, FuncExpr,
   NumberLit, StringLit, TemplateString, BoolLit, NullLit, ListLit, DictLit, BinOp,
 } from './ast';
 import { tokenize } from './lexer';
@@ -61,7 +61,11 @@ export function parse(tokens: Token[]): Program {
       case T.IKIWA: return ifStmt();
       case T.KWA: return forStmt();
       case T.WAKATI: return whileStmt();
-      case T.KAZI: return funcDecl();
+      // `kazi IDENT(...)` is a NAMED declaration; `kazi(...)` with no name is an
+      // anonymous function EXPRESSION → handled as an expression statement.
+      case T.KAZI:
+        if (tokens[pos + 1] && tokens[pos + 1].type === T.IDENT) return funcDecl();
+        return assignOrExpr();
       case T.RUDISHA: return returnStmt();
       case T.JARIBU: return tryStmt();
       case T.LETA: return importStmt();
@@ -175,10 +179,9 @@ export function parse(tokens: Token[]): Program {
     return { kind: 'While', cond, body, line };
   }
 
-  // kazi IDENT ( [IDENT {, IDENT}] ) { stmt } mwisho
-  function funcDecl(): FuncDecl {
-    const line = next().line; // kazi
-    const name = expectIdent('jina la kazi baada ya "kazi"');
+  // ( [IDENT {, IDENT}] ) — orodha ya vigezo (kushirikiwa na kazi yenye jina na
+  // kazi isiyo na jina). Tunaita baada ya "kazi" [IDENT] kuliwa, kabla ya "(".
+  function paramList(): string[] {
     expect(T.LPAREN, '"("');
     const params: string[] = [];
     if (!at(T.RPAREN)) {
@@ -189,9 +192,27 @@ export function parse(tokens: Token[]): Program {
       }
     }
     expect(T.RPAREN, '")"');
+    return params;
+  }
+
+  // kazi IDENT ( [IDENT {, IDENT}] ) { stmt } mwisho
+  function funcDecl(): FuncDecl {
+    const line = next().line; // kazi
+    const name = expectIdent('jina la kazi baada ya "kazi"');
+    const params = paramList();
     const body = block([T.MWISHO]);
     expect(T.MWISHO, '"mwisho"');
     return { kind: 'FuncDecl', name, params, body, line };
+  }
+
+  // kazi ( [IDENT {, IDENT}] ) { stmt } mwisho — kazi isiyo na jina (lambda) kama
+  // THAMANI. Tunaita baada ya kuona "kazi" ikifuatwa na "(" (si jina).
+  function funcExpr(): FuncExpr {
+    const line = next().line; // kazi
+    const params = paramList();
+    const body = block([T.MWISHO]);
+    expect(T.MWISHO, '"mwisho"');
+    return { kind: 'FuncExpr', params, body, line };
   }
 
   // rudisha [expr]
@@ -374,11 +395,11 @@ export function parse(tokens: Token[]): Program {
     let expr = primary();
     for (;;) {
       if (at(T.LPAREN)) {
-        // call: inahalalishwa tu juu ya Ident (callee ni jina)
+        // Application. On a bare Ident → `Call` (named/builtin fast path, also a
+        // variable holding a function value). On ANY OTHER expression (e.g. a
+        // parenthesised lambda, an index, a chained call) → `Apply` of the
+        // function VALUE that expression yields.
         const line = peek().line;
-        if (expr.kind !== 'Ident') {
-          throw Makosa.ilitarajiwa('jina la kazi kabla ya "("', describe(peek()), line);
-        }
         next(); // (
         const args: Expr[] = [];
         if (!at(T.RPAREN)) {
@@ -386,8 +407,13 @@ export function parse(tokens: Token[]): Program {
           while (at(T.COMMA)) { next(); args.push(expression()); }
         }
         expect(T.RPAREN, '")"');
-        const call: Call = { kind: 'Call', callee: expr.name, args, line };
-        expr = call;
+        if (expr.kind === 'Ident') {
+          const call: Call = { kind: 'Call', callee: expr.name, args, line };
+          expr = call;
+        } else {
+          const apply: Apply = { kind: 'Apply', fn: expr, args, line };
+          expr = apply;
+        }
         continue;
       }
       if (at(T.LBRACKET)) {
@@ -447,6 +473,9 @@ export function parse(tokens: Token[]): Program {
         const id: Ident = { kind: 'Ident', name: t.value, line: t.line };
         return id;
       }
+      case T.KAZI:
+        // Anonymous function expression (lambda) as a value.
+        return funcExpr();
       case T.LPAREN: {
         next(); // (
         const e = expression();

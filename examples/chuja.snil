@@ -1,0 +1,13 @@
+# chuja — kuchuja vipengele vinavyokidhi sharti (filter)
+
+weka seti kuwa [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+# Shufwa (even) pekee.
+onyesha chuja(seti, kazi(x) rudisha x % 2 == 0 mwisho)
+
+# Kubwa kuliko 5.
+onyesha chuja(seti, kazi(x) rudisha x > 5 mwisho)
+
+# Chuja maandishi yasiyo tupu (ukweli wa SNIL: "" ni si_kweli).
+weka maneno kuwa ["jambo", "", "habari", "", "salama"]
+onyesha chuja(maneno, kazi(s) rudisha s mwisho)

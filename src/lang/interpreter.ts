@@ -346,6 +346,14 @@ function evaluate(expr: Expr, env: Environment, ctx: Ctx): SnilValue {
   switch (expr.kind) {
     case 'NumberLit': return expr.value;
     case 'StringLit': return expr.value;
+    case 'TemplateString': {
+      // Concatenate parts using the SAME stringify as `+` / `onyesha` display.
+      let s = '';
+      for (const p of expr.parts) {
+        s += p.t === 'lit' ? p.value : displayString(evaluate(p.expr, env, ctx));
+      }
+      return s;
+    }
     case 'BoolLit': return expr.value;
     case 'NullLit': return null;
     case 'ListLit': return expr.items.map((it) => evaluate(it, env, ctx));

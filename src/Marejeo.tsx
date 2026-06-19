@@ -29,7 +29,7 @@ const MANENO: { neno: string; maana: string }[] = [
 // ---- aina za data ----
 const AINA: { jina: string; mfano: string; maelezo: string }[] = [
   { jina: 'Namba', mfano: '10   3.14', maelezo: 'namba kamili au desimali' },
-  { jina: 'Maandishi', mfano: '"Habari"', maelezo: 'mfuatano wa herufi; \\n \\t \\" \\\\' },
+  { jina: 'Maandishi', mfano: '"Habari {jina}"', maelezo: 'mfuatano wa herufi; \\n \\t \\" \\\\; uingizaji wa { msemo }' },
   { jina: 'Kweli', mfano: 'kweli / si_kweli', maelezo: 'thamani ya kimantiki' },
   { jina: 'Tupu', mfano: 'tupu', maelezo: 'kutokuwepo kwa thamani (null)' },
   { jina: 'Orodha', mfano: '["embe", "ndizi"]', maelezo: 'mfululizo wa vitu; fikia kwa x[0]' },
@@ -49,6 +49,16 @@ const WAENDESHAJI: { kiwango: string; alama: string; maana: string }[] = [
 
 // ---- miundo: control structures with tiny snippets ----
 const MIUNDO: { kichwa: string; chanzo: string }[] = [
+  {
+    kichwa: 'uingizaji wa misemo katika maandishi',
+    chanzo: `weka jina kuwa "Asha"
+weka mtu kuwa { jina: "Juma", umri: 20 }
+onyesha "Habari {jina}!"
+onyesha "Jumla: {2 + 3}"
+onyesha "{mtu.jina} ana miaka {mtu.umri}"
+# alama halisi: \\{ na \\}
+onyesha "\\{si uingizaji\\}"`,
+  },
   {
     kichwa: 'ikiwa / vinginevyo',
     chanzo: `ikiwa alama >= 50 basi

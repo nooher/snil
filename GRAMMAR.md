@@ -7,6 +7,18 @@ kila block.)
 ## Lexical
 - **Namba**: `10`, `3.14` (integer or decimal). No leading-`+`.
 - **Maandishi**: `"..."` double-quoted; supports `\n`, `\t`, `\"`, `\\`.
+- **Uingizaji wa misemo (string interpolation)**: inside a double-quoted string,
+  `{ EXPR }` embeds any SNIL expression, stringified with SNIL display rules (the
+  SAME stringify used by `+` concatenation / `_str`). Example:
+  `weka jina kuwa "Asha"` ; `onyesha "Habari {jina}!"` → `Habari Asha!`. The
+  expression may be complex: `"Jumla: {a + b}"`, `"{mtu.jina} ana miaka {mtu.umri}"`,
+  `"{herufi_kubwa(jina)}"`. The expression must stay on one line.
+  - A **literal brace** is written `\{` / `\}`. A `}` that is not closing an
+    interpolation is a literal `}`. Inside `{ … }`, braces nest by depth and `"…"`
+    string literals are scanned over, so braces inside a nested string don't end it.
+  - **Empty interpolation** `{}` (or only whitespace) is a **lexical error** in
+    Kiswahili (write `\{` for a literal brace, or put an expression inside).
+  - A plain string with no `{` is unchanged (a single `StringLit`; zero regression).
 - **Kweli/Uongo**: `kweli`, `si_kweli`. **Tupu**: `tupu`.
 - **Vitambulishi (identifiers)**: start with a letter (a–z, A–Z), then letters/digits/`_`. Not a reserved keyword.
 - **Maoni (comments)**: `# ...` to end of line; `### ... ###` multi-line. Ignored.
@@ -51,6 +63,9 @@ exprStmt    = expr                            # usually a call
 ## Semantics (lazima zifuatwe na interpreter NA codegen)
 - **`+`**: if EITHER operand is Maandishi → string concatenation (the other operand is
   stringified). Otherwise numeric addition. (So `"Jumla " + 15` → `"Jumla 15"`.)
+- **String interpolation** `"…{e}…"`: each `{ e }` is evaluated and stringified by the
+  SAME display rule as `+` / `onyesha` (`_str`), then concatenated with the literal
+  parts. Identical output across interpreter, Python codegen, and JS codegen.
 - Number→string: integers print without `.0` (`15`, not `15.0`); decimals as-is.
 - **Booleans** print as `kweli` / `si_kweli`. **tupu** prints as `tupu`.
 - **Lists** print as `[a, b, c]`; **dicts** as `{jina: Ali, umri: 20}` (display form).

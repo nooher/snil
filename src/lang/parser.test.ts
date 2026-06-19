@@ -115,6 +115,47 @@ describe('parser — precedence', () => {
   });
 });
 
+describe('parser — TemplateString (uingizaji wa misemo)', () => {
+  it('"Habari {jina}!" → Print yenye TemplateString', () => {
+    const p = parseSrc('onyesha "Habari {jina}!"');
+    const pr = p.body[0] as Print;
+    expect(pr.kind).toBe('Print');
+    const t = pr.value as unknown as { kind: string; parts: unknown[] };
+    expect(t.kind).toBe('TemplateString');
+    expect(t.parts).toMatchObject([
+      { t: 'lit', value: 'Habari ' },
+      { t: 'expr', expr: { kind: 'Ident', name: 'jina' } },
+      { t: 'lit', value: '!' },
+    ]);
+  });
+
+  it('hunyambua msemo changamano ndani ya { }', () => {
+    const p = parseSrc('onyesha "Jumla: {a + b}"');
+    const t = (p.body[0] as Print).value as unknown as { parts: { t: string; expr?: Binary }[] };
+    expect(t.parts[1].expr).toMatchObject({ kind: 'Binary', op: '+' });
+  });
+
+  it('hunyambua member access ndani ya { }', () => {
+    const p = parseSrc('onyesha "{mtu.jina} ana miaka {mtu.umri}"');
+    const t = (p.body[0] as Print).value as unknown as { parts: { t: string; expr?: { kind: string } }[] };
+    // Leading "{…" yields an empty lit part first, then the expr.
+    expect(t.parts[1].expr).toMatchObject({ kind: 'Member', name: 'jina' });
+    expect(t.parts[3].expr).toMatchObject({ kind: 'Member', name: 'umri' });
+  });
+
+  it('maandishi bila { } hubaki StringLit (hakuna regression)', () => {
+    const p = parseSrc('onyesha "Habari Dunia"');
+    expect((p.body[0] as Print).value).toMatchObject({ kind: 'StringLit', value: 'Habari Dunia' });
+  });
+
+  it('reline: line ya msemo wa ndani = line ya maandishi', () => {
+    const p = parseSrc('onyesha 1\nonyesha "x {a + b}"');
+    const t = (p.body[1] as Print).value as unknown as { line: number; parts: { expr?: Binary }[] };
+    expect(t.line).toBe(2);
+    expect((t.parts[1].expr as Binary).line).toBe(2);
+  });
+});
+
 describe('parser — makosa (Kiswahili)', () => {
   it('hutupa SnilError kwa tokeni isiyotarajiwa (weka bila kuwa)', () => {
     let err: unknown;

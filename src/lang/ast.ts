@@ -9,6 +9,13 @@ export interface Node { line: number; }
 // ───────────────────────── Expressions ─────────────────────────
 export interface NumberLit extends Node { kind: 'NumberLit'; value: number; }
 export interface StringLit extends Node { kind: 'StringLit'; value: string; }
+/** Interpolated string: "Habari {jina}!" → literal + embedded-expression parts.
+ *  Each part is stringified with SNIL display rules (same as `+` / `_str`) and
+ *  concatenated. A plain string with no `{ … }` stays a StringLit (zero overhead). */
+export interface TemplateString extends Node {
+  kind: 'TemplateString';
+  parts: Array<{ t: 'lit'; value: string } | { t: 'expr'; expr: Expr }>;
+}
 export interface BoolLit extends Node { kind: 'BoolLit'; value: boolean; }   // kweli / si_kweli
 export interface NullLit extends Node { kind: 'NullLit'; }                    // tupu
 export interface ListLit extends Node { kind: 'ListLit'; items: Expr[]; }     // ["a", "b"]
@@ -32,7 +39,7 @@ export interface Index extends Node { kind: 'Index'; target: Expr; index: Expr; 
 export interface Member extends Node { kind: 'Member'; target: Expr; name: string; }
 
 export type Expr =
-  | NumberLit | StringLit | BoolLit | NullLit | ListLit | DictLit
+  | NumberLit | StringLit | TemplateString | BoolLit | NullLit | ListLit | DictLit
   | Ident | Binary | Unary | Call | Index | Member;
 
 // ───────────────────────── Statements ─────────────────────────

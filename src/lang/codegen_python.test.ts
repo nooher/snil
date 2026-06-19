@@ -202,3 +202,31 @@ describe('SNIL → Python file-module imports (leta "x", inlined + executed)', (
     if (HAVE_PY) expect(runPython(src)).toBe('6');
   });
 });
+
+describe('SNIL → Python string interpolation', () => {
+  it('compiles a template to _str-concatenation', () => {
+    const py = toPython('weka jina kuwa "Asha"\nonyesha "Habari {jina}!"');
+    expect(py).toContain('"Habari " + _str(jina) + "!"');
+  });
+
+  it('interpolated output runs identical to interpreter', () => {
+    const src = [
+      'weka mtu kuwa { jina: "Juma", umri: 20 }',
+      'onyesha "Habari {mtu.jina}, una miaka {mtu.umri}"',
+      'onyesha "Jumla: {2 + 3}"',
+      'onyesha "\\{si interpolation\\}"',
+    ].join('\n');
+    if (HAVE_PY) {
+      expect(runPython(src)).toBe('Habari Juma, una miaka 20\nJumla: 5\n{si interpolation}');
+    } else {
+      expect(toPython(src)).toContain('_str(');
+    }
+  });
+
+  it('plain string (no braces) compiles to a plain Python string (regression)', () => {
+    const py = toPython('onyesha "Habari Dunia"');
+    // The emitted program body (after the prelude) is just a plain print — no concat.
+    const bodyLine = py.split('\n').find((l) => l.startsWith('print(_onyesha('));
+    expect(bodyLine).toBe('print(_onyesha("Habari Dunia"))');
+  });
+});

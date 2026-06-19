@@ -6,8 +6,8 @@
 // Hufuatilia mstari na safu (1-based). Herufi isiyojulikana / maandishi
 // yasiyofungwa → SnilError ya Kiswahili kutoka errors.ts.
 
-import { T, KEYWORDS, isKeyword, type Token } from './tokens';
-import { Makosa } from './errors';
+import { T, KEYWORDS, isKeyword, type Token, type TemplatePart } from './tokens';
+import { Makosa, SnilError } from './errors';
 
 export function tokenize(source: string): Token[] {
   const tokens: Token[] = [];
@@ -79,11 +79,17 @@ export function tokenize(source: string): Token[] {
       continue;
     }
 
-    // ── Maandishi "..." ──
+    // ── Maandishi "..." (+ uingizaji wa misemo: { expr }) ──
     if (ch === '"') {
       advance(); // " ya kufungua
-      let str = '';
+      // Segments: literal text accumulates in `lit`; an unescaped `{` opens an
+      // interpolation whose RAW source is captured for the parser. A plain string
+      // (no `{`) yields a single STRING token exactly as before (zero regression).
+      const parts: TemplatePart[] = [];
+      let lit = '';
+      let interpolated = false;
       let closed = false;
+      const flushLit = () => { parts.push({ t: 'lit', value: lit }); lit = ''; };
       while (i < n) {
         const c = peek();
         if (c === '\n') break; // maandishi hayavuki mstari
@@ -92,18 +98,73 @@ export function tokenize(source: string): Token[] {
           advance(); // '\'
           const esc = peek();
           switch (esc) {
-            case 'n': str += '\n'; advance(); break;
-            case 't': str += '\t'; advance(); break;
-            case '"': str += '"'; advance(); break;
-            case '\\': str += '\\'; advance(); break;
-            default: str += '\\'; break; // escape isiyojulikana: hifadhi backslash
+            case 'n': lit += '\n'; advance(); break;
+            case 't': lit += '\t'; advance(); break;
+            case '"': lit += '"'; advance(); break;
+            case '\\': lit += '\\'; advance(); break;
+            case '{': lit += '{'; advance(); break; // \{ → literal brace
+            case '}': lit += '}'; advance(); break; // \} → literal brace
+            default: lit += '\\'; break;            // escape isiyojulikana: hifadhi backslash
           }
           continue;
         }
-        str += advance();
+        if (c === '{') {
+          // Open an interpolation: capture raw source until the MATCHING `}`,
+          // tracking brace depth and skipping over nested string literals so a
+          // `}` inside a string/dict inside the expression doesn't end it early.
+          interpolated = true;
+          const exprLine = line;
+          advance(); // consume '{'
+          flushLit();
+          let src = '';
+          let depth = 1;
+          while (i < n && depth > 0) {
+            const e = peek();
+            if (e === '\n') break; // expression must stay on one line
+            if (e === '"') {
+              // copy a nested string literal verbatim (incl. its escapes)
+              src += advance(); // opening "
+              while (i < n && peek() !== '"' && peek() !== '\n') {
+                if (peek() === '\\') { src += advance(); if (i < n) src += advance(); continue; }
+                src += advance();
+              }
+              if (peek() === '"') src += advance(); // closing "
+              continue;
+            }
+            if (e === '{') { depth++; src += advance(); continue; }
+            if (e === '}') {
+              depth--;
+              if (depth === 0) { advance(); break; } // consume closing '}', drop it
+              src += advance();
+              continue;
+            }
+            src += advance();
+          }
+          if (depth > 0) {
+            throw new SnilError(
+              'Uingizaji wa msemo "{ … }" haujafungwa kwa "}".', exprLine, 'kupima',
+              'tumia "\\{" kwa alama ya kufungua halisi',
+            );
+          }
+          if (src.trim() === '') {
+            throw new SnilError(
+              'Uingizaji wa msemo "{ }" hauna msemo ndani yake.', exprLine, 'kupima',
+              'andika msemo kati ya { }, au tumia "\\{" kwa alama halisi',
+            );
+          }
+          parts.push({ t: 'expr', src, line: exprLine });
+          continue;
+        }
+        lit += advance();
       }
       if (!closed) throw Makosa.maandishiHayajafungwa(startLine);
-      tokens.push({ type: T.STRING, value: str, line: startLine, col: startCol });
+      if (!interpolated) {
+        // No interpolation at all → ordinary STRING (identical to legacy behaviour).
+        tokens.push({ type: T.STRING, value: lit, line: startLine, col: startCol });
+      } else {
+        flushLit(); // trailing literal (may be empty)
+        tokens.push({ type: T.TEMPLATE, value: '', line: startLine, col: startCol, parts });
+      }
       continue;
     }
 

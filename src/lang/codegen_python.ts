@@ -332,6 +332,14 @@ export function generatePython(program: Program, somaModuli?: import('./runtime'
       }
       case 'StringLit':
         return str(e.value);
+      case 'TemplateString': {
+        // "Habari {jina}!" → ("Habari " + _str(jina) + "!"). Literal parts stay
+        // plain strings; expr parts go through _str (same stringify as SNIL `+`).
+        const pieces = e.parts.map((p) =>
+          p.t === 'lit' ? str(p.value) : `_str(${expr(p.expr)})`,
+        );
+        return pieces.length ? `(${pieces.join(' + ')})` : '""';
+      }
       case 'BoolLit':
         return e.value ? 'True' : 'False';
       case 'NullLit':

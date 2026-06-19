@@ -154,6 +154,21 @@ describe('SNIL conformance — cross-target parity on inline programs', () => {
     expect(parity(src)).toBe('witiri 1\nshufwa 4\nwitiri 3');
   });
 
+  it('string interpolation agrees across all three backends', () => {
+    const src = [
+      'weka jina kuwa "Asha"',
+      'weka mtu kuwa { jina: "Juma", umri: 20 }',
+      'onyesha "Habari {jina}!"',
+      'onyesha "Jumla: {2 + 3}"',
+      'onyesha "{mtu.jina} ana miaka {mtu.umri}"',
+      'onyesha "\\{si interpolation\\}"',
+      'onyesha "bila uingizaji"',
+    ].join('\n');
+    expect(parity(src)).toBe(
+      'Habari Asha!\nJumla: 5\nJuma ana miaka 20\n{si interpolation}\nbila uingizaji',
+    );
+  });
+
   it('leta "x" module import inlines + agrees across all three backends', () => {
     const mods: Record<string, string> = {
       salamu: [

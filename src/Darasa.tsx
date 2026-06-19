@@ -10,28 +10,13 @@ import { formatError } from './lang/diagnose';
 import { COURSE } from './darasa/course';
 import { checkLesson } from './darasa/check';
 import type { CheckResult, Lesson } from './darasa/types';
-
-const HIFADHI = 'snil:darasa'; // localStorage key — set of completed lesson ids
-
-// ---- progress persistence -------------------------------------------------
-function someaZilizokamilika(): Set<string> {
-  try {
-    const raw = localStorage.getItem(HIFADHI);
-    if (!raw) return new Set();
-    const arr = JSON.parse(raw);
-    return Array.isArray(arr) ? new Set(arr.filter((x) => typeof x === 'string')) : new Set();
-  } catch {
-    return new Set();
-  }
-}
-
-function hifadhiZilizokamilika(set: Set<string>) {
-  try {
-    localStorage.setItem(HIFADHI, JSON.stringify([...set]));
-  } catch {
-    // hifadhi inaweza kuzuiwa (private mode); UI haijalemewa.
-  }
-}
+import {
+  someaZilizokamilika,
+  hifadhiZilizokamilika,
+  loadProgress,
+  markComplete,
+  issueCertificate,
+} from './darasa/cloud';
 
 // Geuza chochote kuwa SnilError-kama bila kutegemea stub.
 function asSnilError(e: unknown): SnilError {
@@ -67,6 +52,30 @@ export function Darasa() {
   useEffect(() => {
     hifadhiZilizokamilika(kamilika);
   }, [kamilika]);
+
+  // On mount: local state already renders instantly; reconcile with cloud
+  // (merged with local) if a backend is configured. Fully guarded — offline
+  // this is a no-op beyond re-reading localStorage.
+  useEffect(() => {
+    let alive = true;
+    loadProgress()
+      .then((merged) => {
+        if (!alive) return;
+        setKamilika((prev) => {
+          // Only update if cloud added anything new, to avoid a needless render.
+          if (merged.size === prev.size && [...merged].every((id) => prev.has(id))) {
+            return prev;
+          }
+          const next = new Set(prev);
+          merged.forEach((id) => next.add(id));
+          return next;
+        });
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   function chaguaSomo(id: string) {
     const m = masomo.find((x) => x.id === id);
@@ -117,6 +126,8 @@ export function Darasa() {
         nxt.add(somo.id);
         return nxt;
       });
+      // Persist to local + cloud (guarded; offline writes localStorage only).
+      void markComplete(somo.id);
     }
   }
 
@@ -330,6 +341,26 @@ function Cheti({
     month: 'long',
     year: 'numeric',
   });
+
+  // Verification code ("cheti namba") — minted when the learner confirms their
+  // name. issueCertificate is offline-safe: it always returns a code (cloud row
+  // when a backend is on, otherwise a locally-minted one).
+  const [code, setCode] = useState<string>('');
+  const [inatoa, setInatoa] = useState<boolean>(false);
+
+  async function pataCheti() {
+    if (!jina.trim() || inatoa) return;
+    setInatoa(true);
+    try {
+      const res = await issueCertificate(jina);
+      setCode(res.code);
+    } catch {
+      // issueCertificate never throws, but stay defensive.
+    } finally {
+      setInatoa(false);
+    }
+  }
+
   return (
     <div className="cheti-eneo">
       <div className="cheti">
@@ -342,7 +373,10 @@ function Cheti({
           className="cheti-jina-ingizo"
           value={jina}
           placeholder="Andika jina lako"
-          onChange={(e) => setJina(e.target.value)}
+          onChange={(e) => {
+            setJina(e.target.value);
+            setCode(''); // jina likibadilika, namba ya zamani haitumiki
+          }}
           aria-label="Jina la mwanafunzi"
         />
         <div className="cheti-jina-onyesho">{jina.trim() || '— jina lako —'}</div>
@@ -350,6 +384,19 @@ function Cheti({
           umejifunza kuandika programu kwa Kiswahili kwa kutumia SNIL — vigeu, masharti,
           vitanzi, na kazi. Endelea kuunda!
         </p>
+        {code ? (
+          <div className="cheti-namba" aria-live="polite">
+            Cheti namba: <strong>{code}</strong>
+          </div>
+        ) : (
+          <button
+            className="btn btn-run btn-ndogo cheti-toa"
+            onClick={pataCheti}
+            disabled={!jina.trim() || inatoa}
+          >
+            {inatoa ? 'Inatolewa…' : 'Toa cheti & pata namba'}
+          </button>
+        )}
         <div className="cheti-chini">
           <span>{leo}</span>
           <span className="cheti-saini">SNIL · Laetoli</span>

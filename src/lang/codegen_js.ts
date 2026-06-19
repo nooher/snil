@@ -388,6 +388,14 @@ export function generateJS(program: Program, somaModuli?: import('./runtime').Mo
         return String(e.value);
       case 'StringLit':
         return str(e.value);
+      case 'TemplateString': {
+        // "Habari {jina}!" → ("Habari " + _str(jina) + "!"). Literal parts stay
+        // plain strings; expr parts go through _str (same stringify as SNIL `+`).
+        const pieces = e.parts.map((p) =>
+          p.t === 'lit' ? str(p.value) : `_str(${expr(p.expr)})`,
+        );
+        return pieces.length ? `(${pieces.join(' + ')})` : '""';
+      }
       case 'BoolLit':
         return e.value ? 'true' : 'false';
       case 'NullLit':

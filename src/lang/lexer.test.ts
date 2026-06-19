@@ -80,6 +80,65 @@ describe('lexer — aina za tokeni', () => {
   });
 });
 
+describe('lexer — uingizaji wa misemo katika maandishi (string interpolation)', () => {
+  it('maandishi bila { } hubaki STRING ya kawaida (hakuna regression)', () => {
+    const toks = tokenize('onyesha "Habari Dunia"');
+    expect(toks[1].type).toBe(T.STRING);
+    expect(toks[1].value).toBe('Habari Dunia');
+    expect(toks[1].parts).toBeUndefined();
+  });
+
+  it('maandishi yenye { } huwa TEMPLATE yenye sehemu (parts)', () => {
+    const toks = tokenize('onyesha "Habari {jina}!"');
+    const tpl = toks[1];
+    expect(tpl.type).toBe(T.TEMPLATE);
+    expect(tpl.parts).toEqual([
+      { t: 'lit', value: 'Habari ' },
+      { t: 'expr', src: 'jina', line: 1 },
+      { t: 'lit', value: '!' },
+    ]);
+  });
+
+  it('hunasa msemo changamano ndani ya { }', () => {
+    const toks = tokenize('onyesha "Jumla: {a + b}"');
+    const tpl = toks[1];
+    expect(tpl.type).toBe(T.TEMPLATE);
+    expect(tpl.parts![1]).toEqual({ t: 'expr', src: 'a + b', line: 1 });
+  });
+
+  it('\\{ na \\} ni alama halisi (si uingizaji) → STRING ya kawaida', () => {
+    const toks = tokenize('onyesha "\\{si interpolation\\}"');
+    expect(toks[1].type).toBe(T.STRING);
+    expect(toks[1].value).toBe('{si interpolation}');
+  });
+
+  it('hupuuza } iliyo nje ya uingizaji (alama halisi)', () => {
+    const toks = tokenize('onyesha "funga} hapa"');
+    expect(toks[1].type).toBe(T.STRING);
+    expect(toks[1].value).toBe('funga} hapa');
+  });
+
+  it('hunasa nukuu ndani ya msemo wa uingizaji bila kuvunja', () => {
+    const toks = tokenize('onyesha "Salamu {herufi_kubwa("asha")}"');
+    const tpl = toks[1];
+    expect(tpl.type).toBe(T.TEMPLATE);
+    expect(tpl.parts![1]).toEqual({ t: 'expr', src: 'herufi_kubwa("asha")', line: 1 });
+  });
+
+  it('hutupa kosa kwa { } tupu', () => {
+    let err: unknown;
+    try { tokenize('onyesha "{}"'); } catch (e) { err = e; }
+    expect(err).toBeInstanceOf(SnilError);
+    expect((err as SnilError).awamu).toBe('kupima');
+  });
+
+  it('hutupa kosa kwa { isiyofungwa', () => {
+    let err: unknown;
+    try { tokenize('onyesha "Habari {jina"'); } catch (e) { err = e; }
+    expect(err).toBeInstanceOf(SnilError);
+  });
+});
+
 describe('lexer — makosa (Kiswahili)', () => {
   it('hutupa SnilError kwa herufi isiyojulikana', () => {
     let err: unknown;

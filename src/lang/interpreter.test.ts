@@ -205,6 +205,57 @@ describe('semantics', () => {
   });
 });
 
+describe('string interpolation (uingizaji wa misemo)', () => {
+  it('huingiza kigeu', () => {
+    const r = run('weka jina kuwa "Asha"\nonyesha "Habari {jina}!"');
+    expect(r.error).toBeNull();
+    expect(r.output).toBe('Habari Asha!');
+  });
+
+  it('huingiza msemo wa hisabati (namba kamili bila .0)', () => {
+    const r = run('onyesha "Jumla: {2 + 3}"');
+    expect(r.error).toBeNull();
+    expect(r.output).toBe('Jumla: 5');
+  });
+
+  it('huingiza member access kutoka kamusi', () => {
+    const src = [
+      'weka mtu kuwa { jina: "Juma", umri: 20 }',
+      'onyesha "{mtu.jina} ana miaka {mtu.umri}"',
+    ].join('\n');
+    const r = run(src);
+    expect(r.error).toBeNull();
+    expect(r.output).toBe('Juma ana miaka 20');
+  });
+
+  it('\\{ ... \\} ni alama halisi (si uingizaji)', () => {
+    const r = run('onyesha "\\{si interpolation\\}"');
+    expect(r.error).toBeNull();
+    expect(r.output).toBe('{si interpolation}');
+  });
+
+  it('hutumia kanuni za kuonyesha za SNIL (kweli/tupu/orodha)', () => {
+    const src = [
+      'weka bei kuwa [10, 20]',
+      'onyesha "Hali: {kweli}, tupu: {tupu}, orodha: {bei}"',
+    ].join('\n');
+    const r = run(src);
+    expect(r.error).toBeNull();
+    expect(r.output).toBe('Hali: kweli, tupu: tupu, orodha: [10, 20]');
+  });
+
+  it('huita kazi ndani ya uingizaji', () => {
+    const src = [
+      'leta maandishi',
+      'weka jina kuwa "asha"',
+      'onyesha "Habari {herufi_kubwa(jina)}!"',
+    ].join('\n');
+    const r = run(src);
+    expect(r.error).toBeNull();
+    expect(r.output).toBe('Habari ASHA!');
+  });
+});
+
 describe('module imports (leta "faili")', () => {
   /** Build an in-memory resolver from a name → source map. */
   function resolver(modules: Record<string, string>): SnilIO['somaModuli'] {

@@ -7,6 +7,7 @@ export enum T {
   // literals & names
   NUMBER = 'NUMBER',
   STRING = 'STRING',
+  TEMPLATE = 'TEMPLATE',       // double-quoted string containing { expr } interpolation
   IDENT = 'IDENT',
   // keywords (Kiswahili)
   ONYESHA = 'ONYESHA',         // print / output
@@ -54,11 +55,19 @@ export enum T {
   EOF = 'EOF',
 }
 
+/** A segment of an interpolated string literal (T.TEMPLATE).
+ *  `lit` parts hold already-decoded text; `expr` parts hold the RAW SNIL source
+ *  captured between matching `{ … }` (re-tokenized + parsed by the parser). */
+export type TemplatePart =
+  | { t: 'lit'; value: string }
+  | { t: 'expr'; src: string; line: number };
+
 export interface Token {
   type: T;
   value: string; // raw lexeme (for NUMBER/STRING/IDENT) or '' for fixed tokens
   line: number;  // 1-based
   col: number;   // 1-based
+  parts?: TemplatePart[]; // present only on T.TEMPLATE tokens
 }
 
 /** Reserved keyword spelling → token type (Technical Spec §22). */

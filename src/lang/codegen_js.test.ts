@@ -239,3 +239,27 @@ describe('SNIL → JavaScript file-module imports (leta "x", inlined + executed)
     expect(() => toJS('leta "salamu"\nonyesha 1')).toThrow(SnilError);
   });
 });
+
+describe('SNIL → JavaScript string interpolation', () => {
+  it('compiles a template to _str-concatenation', () => {
+    const js = toJS('weka jina kuwa "Asha"\nonyesha "Habari {jina}!"');
+    expect(js).toContain('"Habari " + _str(jina) + "!"');
+  });
+
+  it('interpolated output runs identical to interpreter (via node)', () => {
+    const src = [
+      'weka mtu kuwa { jina: "Juma", umri: 20 }',
+      'onyesha "Habari {mtu.jina}, una miaka {mtu.umri}"',
+      'onyesha "Jumla: {2 + 3}"',
+      'onyesha "\\{si interpolation\\}"',
+    ].join('\n');
+    expect(runJS(src)).toBe('Habari Juma, una miaka 20\nJumla: 5\n{si interpolation}');
+  });
+
+  it('plain string (no braces) compiles to a plain JS string (regression)', () => {
+    const js = toJS('onyesha "Habari Dunia"');
+    // The emitted program body (after the prelude) is just a plain print — no concat.
+    const bodyLine = js.split('\n').find((l) => l.startsWith('_onyesha('));
+    expect(bodyLine).toBe('_onyesha("Habari Dunia");');
+  });
+});

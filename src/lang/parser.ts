@@ -12,8 +12,9 @@ import type {
   VarDecl, Assign, Print, Input, If, ForEach, ForRange, While,
   FuncDecl, Return, Try, Import, ListAdd, ListRemove, FileWrite, FileRead, ExprStmt,
   Ident, Index, Member, Binary, Unary, Call,
-  NumberLit, StringLit, BoolLit, NullLit, ListLit, DictLit, BinOp,
+  NumberLit, StringLit, TemplateString, BoolLit, NullLit, ListLit, DictLit, BinOp,
 } from './ast';
+import { tokenize } from './lexer';
 
 export function parse(tokens: Token[]): Program {
   let pos = 0;
@@ -393,6 +394,10 @@ export function parse(tokens: Token[]): Program {
         const lit: StringLit = { kind: 'StringLit', value: t.value, line: t.line };
         return lit;
       }
+      case T.TEMPLATE: {
+        next();
+        return templateString(t);
+      }
       case T.KWELI: {
         next();
         const lit: BoolLit = { kind: 'BoolLit', value: true, line: t.line };
@@ -423,6 +428,45 @@ export function parse(tokens: Token[]): Program {
       case T.LBRACE: return dictLit();
       default:
         throw Makosa.ilitarajiwa('msemo (namba, maandishi, kigeu, n.k.)', describe(t), t.line);
+    }
+  }
+
+  // "…{ expr }…" — maandishi yenye uingizaji. Kila sehemu ya `expr` ina chanzo
+  // ghafi kilichonaswa na lexer; tunakitokeniza + kukichanganua kwa parser ileile.
+  function templateString(tok: Token): TemplateString {
+    const rawParts = tok.parts ?? [];
+    const parts: TemplateString['parts'] = [];
+    for (const p of rawParts) {
+      if (p.t === 'lit') {
+        parts.push({ t: 'lit', value: p.value });
+        continue;
+      }
+      // Parse the captured expression source as a standalone expression.
+      const subTokens = tokenize(p.src);
+      const sub = parse(subTokens);
+      if (sub.body.length !== 1 || sub.body[0].kind !== 'ExprStmt') {
+        throw Makosa.ilitarajiwa(
+          'msemo mmoja ndani ya { }', p.src.trim() || 'tupu', p.line,
+        );
+      }
+      const expr = (sub.body[0] as ExprStmt).expr;
+      // Re-base the line number so runtime errors point at the string's line.
+      reline(expr, p.line);
+      parts.push({ t: 'expr', expr });
+    }
+    return { kind: 'TemplateString', parts, line: tok.line };
+  }
+
+  // Rewrite every node's `line` to the string literal's source line (the captured
+  // expr source is line 1 in its own mini-tokenization).
+  function reline(node: unknown, line: number): void {
+    if (node === null || typeof node !== 'object') return;
+    const obj = node as Record<string, unknown>;
+    if (typeof obj.line === 'number') obj.line = line;
+    for (const key of Object.keys(obj)) {
+      const v = obj[key];
+      if (Array.isArray(v)) v.forEach((c) => reline(c, line));
+      else if (v && typeof v === 'object') reline(v, line);
     }
   }
 

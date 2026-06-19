@@ -15,6 +15,7 @@
     "snil": "node --experimental-transform-types --disable-warning=ExperimentalWarning scripts/snil.ts"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.106.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

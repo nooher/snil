@@ -26,8 +26,10 @@ const { formatSnil } = await import('../src/lang/format.ts');
 const { combineResolvers, registryResolver, standardRegistryResolver } = await import(
   '../src/lang/packages/registry.ts'
 );
+const { createRemoteRegistry, scanImports } = await import('../src/lang/packages/remote.ts');
 type ModuleResolver = import('../src/lang/runtime.ts').ModuleResolver;
 type Registry = import('../src/lang/packages/registry.ts').Registry;
+type RemoteRegistry = import('../src/lang/packages/remote.ts').RemoteRegistry;
 
 /**
  * The module resolver used by `endesha` / `tengeneza`. Precedence (first wins):
@@ -38,7 +40,7 @@ type Registry = import('../src/lang/packages/registry.ts').Registry;
  *   3. the bundled STANDARD registry (tarehe / jiometri / takwimu), offline.
  * So a local module ALWAYS shadows a package of the same name.
  */
-function cliResolver(baseDir: string): ModuleResolver {
+function cliResolver(baseDir: string, remote?: RemoteRegistry): ModuleResolver {
   const pakejiDir = nodePath.join(baseDir, 'snil_pakeji');
   const layers: (ModuleResolver | null)[] = [fsModuleResolver(baseDir)];
   try {
@@ -67,7 +69,72 @@ function cliResolver(baseDir: string): ModuleResolver {
     // no snil_pakeji/ — fine.
   }
   layers.push(standardRegistryResolver);
+  // Remote registry LAST — local file → snil_pakeji/ cache → standard → remote.
+  // (The remote resolver reads only its in-memory cache, warmed by prefetch.)
+  if (remote) layers.push(remote.resolver);
   return combineResolvers(...layers);
+}
+
+/**
+ * The configured remote registry URL, from `--registry <url>` (consumed off the
+ * args) or the `SNIL_REGISTRY` env var. Returns { url, rest } where `rest` is the
+ * args with the flag removed. No URL → url is undefined.
+ */
+function chukuaRegistry(args: string[]): { url: string | undefined; rest: string[] } {
+  const rest: string[] = [];
+  let url: string | undefined = process.env.SNIL_REGISTRY || undefined;
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--registry') {
+      url = args[i + 1];
+      i++;
+    } else {
+      rest.push(args[i]);
+    }
+  }
+  return { url, rest };
+}
+
+/**
+ * If a registry URL is configured, build a remote registry SEEDED from the on-disk
+ * snil_pakeji/ cache (so prior fetches work offline), prefetch this program's
+ * `leta "..."` imports that aren't already local/standard/cached, then WRITE any
+ * newly fetched packages to snil_pakeji/<pkg>/<module>.snil for next time. Returns
+ * the remote handle (or undefined if no URL). Network failure is non-fatal.
+ */
+async function andaaRegistry(
+  source: string,
+  baseDir: string,
+  url: string | undefined,
+): Promise<RemoteRegistry | undefined> {
+  if (!url) return undefined;
+  const remote = createRemoteRegistry(url, fetch as never);
+  // A predicate so we don't fetch what a higher layer already satisfies.
+  const local = cliResolver(baseDir); // local → snil_pakeji/ → standard
+  const isLocal = (name: string) => local(name) != null;
+  const wanted = scanImports(source).filter((n) => !isLocal(n));
+  if (wanted.length === 0) return remote;
+  try {
+    await remote.prefetch(wanted);
+  } catch {
+    return remote; // offline / down — fall through to Kiswahili error on miss
+  }
+  // Persist freshly fetched packages to snil_pakeji/ so the next run is offline.
+  const fetched = remote.cached();
+  const pakejiDir = nodePath.join(baseDir, 'snil_pakeji');
+  for (const name of wanted) {
+    const pkg = fetched[name];
+    if (!pkg) continue;
+    try {
+      const dir = nodePath.join(pakejiDir, name);
+      fs.mkdirSync(dir, { recursive: true });
+      for (const [mod, src] of Object.entries(pkg.modules)) {
+        fs.writeFileSync(nodePath.join(dir, mod + '.snil'), src, 'utf-8');
+      }
+    } catch {
+      // cache write failed (read-only fs etc.) — in-memory copy still works.
+    }
+  }
+  return remote;
 }
 
 const TOLEO = 'SNIL 0.1';
@@ -75,11 +142,14 @@ const TOLEO = 'SNIL 0.1';
 const MSAADA = `SNIL — lugha ya programu ya Kiswahili (na Laetoli)
 
 Matumizi:
-  snil endesha <faili.snil>                    Tekeleza programu ya SNIL
+  snil endesha <faili.snil> [--registry URL]   Tekeleza programu ya SNIL
   snil tengeneza <faili.snil> [--toka out.py]  Tafsiri SNIL kuwa Python
   snil nadhifu <faili.snil> [--badili]         Nadhifisha mpangilio wa SNIL
   snil msaada                                  Onyesha ujumbe huu
   snil --toleo                                 Onyesha toleo la SNIL
+
+Rejista ya mbali (hiari): tumia --registry URL au SNIL_REGISTRY=URL.
+  Pakeji hupakuliwa mara moja kisha huhifadhiwa katika snil_pakeji/ (offline).
 
 Mifano:
   snil endesha examples/habari.snil
@@ -104,8 +174,9 @@ function somaChanzo(path: string): string {
   }
 }
 
-function amriEndesha(args: string[]): void {
-  const path = args[0];
+async function amriEndesha(args: string[]): Promise<void> {
+  const { url, rest } = chukuaRegistry(args);
+  const path = rest[0];
   if (!path) {
     process.stderr.write('Hitilafu: taja faili la kuendesha. Mfano: snil endesha programu.snil\n');
     process.exit(1);
@@ -113,14 +184,17 @@ function amriEndesha(args: string[]): void {
   const source = somaChanzo(path);
   // File imports (`leta "jina"`) resolve relative to the entry file's directory.
   const baseDir = nodePath.dirname(path);
-  const result = run(source, { ...nodeIO(), somaModuli: cliResolver(baseDir) }); // output streams via nodeIO.andika
+  const remote = await andaaRegistry(source, baseDir, url);
+  const result = run(source, { ...nodeIO(), somaModuli: cliResolver(baseDir, remote) }); // output streams via nodeIO.andika
   if (result.error) {
     process.stderr.write(formatError(source, result.error) + '\n');
     process.exit(1);
   }
 }
 
-function amriTengeneza(args: string[]): void {
+async function amriTengeneza(args: string[]): Promise<void> {
+  const { url, rest: rArgs } = chukuaRegistry(args);
+  args = rArgs;
   let path: string | undefined;
   let toka: string | undefined;
   const ulikuwepoToka = args.includes('--toka');
@@ -141,10 +215,12 @@ function amriTengeneza(args: string[]): void {
     process.exit(1);
   }
   const source = somaChanzo(path);
+  const baseDir = nodePath.dirname(path);
+  const remote = await andaaRegistry(source, baseDir, url);
   let python: string;
   try {
     // Inline file imports + packages relative to the entry file's directory.
-    python = toPython(source, cliResolver(nodePath.dirname(path)));
+    python = toPython(source, cliResolver(baseDir, remote));
   } catch (e) {
     const err = e instanceof SnilError
       ? e
@@ -220,7 +296,7 @@ function amriNadhifu(args: string[]): void {
   }
 }
 
-function main(): void {
+async function main(): Promise<void> {
   // Quiet the experimental-loader warning so CLI output stays clean Kiswahili.
   void pathToFileURL;
   const argv = process.argv.slice(2);
@@ -235,11 +311,11 @@ function main(): void {
     return;
   }
   if (amri === 'endesha') {
-    amriEndesha(argv.slice(1));
+    await amriEndesha(argv.slice(1));
     return;
   }
   if (amri === 'tengeneza') {
-    amriTengeneza(argv.slice(1));
+    await amriTengeneza(argv.slice(1));
     return;
   }
   if (amri === 'nadhifu') {

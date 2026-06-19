@@ -20,6 +20,12 @@ export {
   standardRegistryResolver,
 } from './packages/registry';
 export type { Registry, SnilPackage } from './packages/registry';
+export {
+  createRemoteRegistry,
+  scanImports,
+  prefetchImports,
+} from './packages/remote';
+export type { RemoteRegistry, RemotePackageDoc, FetchLike } from './packages/remote';
 
 export { tokenize } from './lexer';
 export { buildSourceMap, encodeVLQ, decodeVLQ } from './sourcemap';

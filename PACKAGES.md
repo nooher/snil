@@ -97,12 +97,102 @@ The CLI also reads an optional `snil_pakeji/` directory next to the entry file:
 
 These sit **between** local files and the standard registry in precedence.
 
-## A remote registry (future)
+## A remote registry (sovereign, optional, offline-friendly)
 
-Because a registry is just data, a remote registry URL could be fetched once,
-cached as a `Registry` object, and layered with `combineResolvers` — no language
-change required:
+Anyone can host SNIL packages. A remote registry is **optional** — SNIL works
+fully offline with the bundled standard registry plus any locally cached
+packages. When configured, `leta "pkg"` can also resolve packages fetched from a
+registry URL.
+
+### Index format — one JSON file per package
+
+A registry serves **one JSON document per package** at a predictable path:
+
+```
+GET <registryUrl>/<pkg>.json
+```
+
+The document is exactly a package (`maelezo` optional on the wire), with **inline
+SNIL source** for each module:
+
+```jsonc
+// GET https://reg.example/salaam.json
+{
+  "version": "1.0.0",
+  "maelezo": "Salamu za mbali.",
+  "modules": {
+    "salaam": "kazi karibu(jina)\n    rudisha \"Karibu \" + jina\nmwisho",
+    "rasmi":  "kazi heshima(jina)\n    rudisha \"Mheshimiwa \" + jina\nmwisho"
+  }
+}
+```
+
+The module named exactly the package is the **main** (`leta "salaam"`); other
+modules are reachable as `leta "salaam/rasmi"`. Per-package fetch (rather than one
+big `index.json`) was chosen because it is the simplest robust thing to cache and
+reason about: one file per package, fetched lazily on first use, cached forever.
+
+**Hosting one** is therefore trivial — drop `<pkg>.json` files on any static host
+(GitHub Pages, S3, a VPS, a Raspberry Pi) and point clients at the base URL.
+
+**v1 limits (by design):** module sources are **inline** in the JSON. There is
+**no transitive URL fetching** — a `modules` value is SNIL source, never a URL.
+This keeps the cache trivial to persist and keeps conformance intact (remote
+packages are just SNIL source, inlined exactly like local files).
+
+### The async-prefetch → sync-resolve bridge
+
+A `ModuleResolver` is **synchronous** `(name) => string | null`, but fetching is
+async. `src/lang/packages/remote.ts` bridges the two phases:
 
 ```ts
-combineResolvers(workspaceResolver, registryResolver(remote), standardRegistryResolver)
+const remote = createRemoteRegistry(registryUrl, fetch);
+await prefetchImports(code, remote);            // 1. async: warm the cache
+run(code, { somaModuli: combineResolvers(workspace, standardRegistryResolver, remote.resolver) });
+                                                 // 2. sync: resolver reads cache
 ```
+
+- `createRemoteRegistry(baseUrl, fetchImpl, seed?)` → a handle with `.prefetch()`,
+  a sync `.resolver`, `.cached()`, and `.has()`.
+- `prefetch(names)` fetches (those not already attempted) and fills an in-memory
+  cache. A down/missing remote is **non-fatal** — it is cached as "absent" and the
+  sync resolver returns null, so precedence falls through to the normal Kiswahili
+  *“… haijapatikana.”* error.
+- `prefetchImports(source, remote, isLocal?)` scans the program's `leta "..."`
+  string imports and prefetches any not already cached or claimed by `isLocal`
+  (so local files / standard packages never trigger a network call).
+- `scanImports(source)` returns the unique package names a program imports.
+
+**Remote packages MUST be prefetched before a synchronous `run` / `toPython` /
+`toJS`.** The browser playground `await`s `prefetchImports(code, fetch)` before
+running; the CLI prefetches before compiling.
+
+### Precedence (with the remote layer)
+
+```
+local workspace file  →  snil_pakeji/ cache  →  standard registry  →  remote fetch  →  (error)
+```
+
+A local module always shadows a package; the standard registry shadows the
+remote; the remote only fills names nobody else has.
+
+### CLI
+
+Configure a registry with `--registry <url>` or the `SNIL_REGISTRY` env var:
+
+```sh
+SNIL_REGISTRY=https://reg.example snil endesha main.snil
+snil endesha main.snil --registry https://reg.example
+```
+
+On a cache miss the CLI fetches the package, runs it, **and writes it to
+`snil_pakeji/<pkg>/<module>.snil`** — so the next run is fully offline (resolved
+from the `snil_pakeji/` cache, no network). The remote layer sits **last** in
+precedence.
+
+### Browser
+
+If `VITE_SNIL_REGISTRY` is set at build time, the Playground builds a remote
+registry once and `await`s `prefetchImports(code, fetch)` before each run /
+Python / JS view (cached in memory for the session). With **no** registry
+configured, everything works exactly as before (bundled standard registry only).

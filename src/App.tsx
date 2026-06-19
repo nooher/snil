@@ -4,7 +4,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { run, toPython, toJS, createReplSession, diagnoseAll } from './lang';
 import { combineResolvers, standardRegistryResolver } from './lang';
-import type { SnilError } from './lang';
+import { createRemoteRegistry, prefetchImports } from './lang';
+import type { RemoteRegistry, SnilError } from './lang';
 import { formatError, formatErrors } from './lang/diagnose';
 import { formatSnil } from './lang/format';
 import { Darasa } from './Darasa';
@@ -12,6 +13,13 @@ import { Karibu } from './Karibu';
 import { Marejeo } from './Marejeo';
 
 type Modi = 'karibu' | 'playground' | 'jaribio' | 'jifunze' | 'marejeo';
+
+// Rejista ya mbali (hiari). Ikiwekwa kwa VITE_SNIL_REGISTRY, `leta "pkg"` huweza
+// kupata pakeji zilizohifadhiwa kwenye seva ya mbali — baada ya kuzipakua kwanza
+// (prefetch). Bila URL, kila kitu hufanya kazi kwa rejista ya kawaida pekee.
+const REGISTRY_URL: string | undefined =
+  (import.meta as { env?: Record<string, string | undefined> }).env?.VITE_SNIL_REGISTRY ||
+  undefined;
 
 const MODI_ORODHA: { id: Modi; lebo: string }[] = [
   { id: 'karibu', lebo: 'Karibu' },
@@ -591,8 +599,14 @@ function Playground() {
   // Idadi ya mistari kwa gutter ya mhariri.
   const mistari = useMemo(() => code.split('\n').length, [code]);
 
+  // Rejista ya mbali (ikiwa imewekwa) — huundwa mara moja, cache inadumu.
+  const remoteRef = useRef<RemoteRegistry | null>(
+    REGISTRY_URL ? createRemoteRegistry(REGISTRY_URL, fetch) : null,
+  );
+
   // Resolver: leta "x" → kwanza faili za workspace (zinazoweza kuficha pakeji),
-  // kisha pakeji za rejista ya kawaida (tarehe / jiometri / takwimu).
+  // kisha pakeji za rejista ya kawaida (tarehe / jiometri / takwimu), kisha
+  // rejista ya mbali (cache yake huwashwa na prefetchImports kabla ya kuendesha).
   const somaModuli = useMemo(() => {
     const workspace = (name: string): string | null => {
       const f =
@@ -600,8 +614,29 @@ function Playground() {
         faili.find((x) => x.name === name + '.snil');
       return f ? f.code : null;
     };
-    return combineResolvers(workspace, standardRegistryResolver);
+    return combineResolvers(
+      workspace,
+      standardRegistryResolver,
+      remoteRef.current?.resolver,
+    );
   }, [faili]);
+
+  // Pakua pakeji za mbali zinazohitajika na `code` kabla ya kuendesha (sync).
+  async function andaaMbali() {
+    const remote = remoteRef.current;
+    if (!remote) return;
+    const local = (name: string): boolean => {
+      const f =
+        faili.find((x) => x.name === name) ??
+        faili.find((x) => x.name === name + '.snil');
+      return !!f || standardRegistryResolver(name) != null;
+    };
+    try {
+      await prefetchImports(code, remote, local);
+    } catch {
+      // mbali haipatikani — tunaendelea; leta isiyopatikana itatoa kosa la Kiswahili.
+    }
+  }
 
   function setCode(mpya: string) {
     setFaili((prev) =>
@@ -609,10 +644,11 @@ function Playground() {
     );
   }
 
-  function endesha() {
+  async function endesha() {
     setKichupo('matokeo');
     setImeendeshwa(true);
     setPaneMobile('matokeo'); // kwenye simu, onyesha tokeo mara baada ya kuendesha
+    await andaaMbali(); // pakua pakeji za mbali (kama zipo) kabla ya kuendesha sync
     // Kwanza: kusanya makosa YOTE ya kisintaksia (kupima/kuchanganua). Kama yapo,
     // onyesha yote pamoja badala ya kuendesha — mwanafunzi aone makosa yote kwa mara moja.
     const makosa = diagnoseAll(code);
@@ -637,9 +673,10 @@ function Playground() {
     }
   }
 
-  function onyeshaPython() {
+  async function onyeshaPython() {
     setKichupo('python');
     setPaneMobile('matokeo');
+    await andaaMbali();
     try {
       setPython(toPython(code, somaModuli));
       setPythonKosa('');
@@ -649,9 +686,10 @@ function Playground() {
     }
   }
 
-  function onyeshaJS() {
+  async function onyeshaJS() {
     setKichupo('js');
     setPaneMobile('matokeo');
+    await andaaMbali();
     try {
       setJs(toJS(code, somaModuli));
       setJsKosa('');

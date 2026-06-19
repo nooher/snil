@@ -4,7 +4,7 @@
   "description": "Syntax highlighting and editor support for SNIL, the sovereign Kiswahili programming language. Part of the SNIL flagship by Laetoli.",
   "version": "0.1.0",
   "publisher": "laetoli",
-  "license": "UNLICENSED",
+  "license": "Apache-2.0",
   "engines": {
     "vscode": "^1.80.0"
   },

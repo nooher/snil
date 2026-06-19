@@ -82,10 +82,12 @@ npm run snil msaada                                         # onyesha msaada
 
 ## Leseni — License
 
-Leseni rasmi ya SNIL inakamilishwa na Laetoli Ltd. Specification itabaki wazi kwa
-kusomwa, kufundishwa, kutafitiwa na kuboreshwa (ona Katiba, Ibara ya 11).
-*(The official license is being finalized by Laetoli Ltd; the specification remains
-open to be read, taught, researched and improved.)*
+SNIL imetolewa chini ya leseni ya **Apache License 2.0** (ona [LICENSE](./LICENSE) na
+[NOTICE](./NOTICE)) — huria kwa matumizi yoyote (shule, serikali, kampuni) kwa kutaja
+chanzo, ikiwa na kinga ya hataza. Specification inabaki wazi kwa kusomwa, kufundishwa,
+kutafitiwa na kuboreshwa (Katiba, Ibara ya 11). Hakimiliki © 2026 Laetoli Ltd.
+*(Licensed under Apache-2.0 — free for any use with attribution + a patent grant;
+the specification stays open. Copyright © 2026 Laetoli Ltd.)*
 
 ---
 

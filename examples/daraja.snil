@@ -1,0 +1,36 @@
+# daraja.snil — vinginevyo ikiwa (else-if chain) + maktaba mpya
+# (kamusi: funguo/thamani/ina_ufunguo/idadi_funguo; hisabati: mviringo_juu/chini;
+#  maandishi: pindua). Backends zote tatu hutoa matokeo yale yale.
+leta hisabati
+leta kamusi
+leta maandishi
+
+# Mfumo wa madaraja kwa kutumia mnyororo wa "vinginevyo ikiwa".
+kazi daraja(alama)
+    ikiwa alama >= 80 basi
+        rudisha "A"
+    vinginevyo ikiwa alama >= 70 basi
+        rudisha "B"
+    vinginevyo ikiwa alama >= 60 basi
+        rudisha "C"
+    vinginevyo ikiwa alama >= 50 basi
+        rudisha "D"
+    vinginevyo
+        rudisha "F"
+    mwisho
+mwisho
+
+weka wanafunzi kuwa { Asha: 82, Juma: 67, Neema: 54, Baraka: 40 }
+
+kwa kila jina katika funguo(wanafunzi)
+    onyesha "{jina}: {daraja(wanafunzi[jina])}"
+mwisho
+
+weka alama kuwa thamani(wanafunzi)
+onyesha "Wastani: " + mviringo(wastani(alama), 2)
+onyesha "Juu zaidi: " + mviringo_juu(wastani(alama))
+onyesha "Chini zaidi: " + mviringo_chini(wastani(alama))
+onyesha "Idadi ya wanafunzi: " + idadi_funguo(wanafunzi)
+onyesha "Je, kuna Asha? " + ina_ufunguo(wanafunzi, "Asha")
+onyesha "Je, kuna Tatu? " + ina_ufunguo(wanafunzi, "Tatu")
+onyesha pindua(herufi_kubwa("tanzania"))

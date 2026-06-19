@@ -45,7 +45,12 @@ varDecl     = "weka" IDENT "kuwa" expr
 assign      = lvalue "=" expr                 # lvalue = IDENT | index | member
 print       = "onyesha" expr
 input       = "uliza" expr "kuwa" IDENT
-if          = "ikiwa" expr "basi" { statement } [ "vinginevyo" { statement } ] "mwisho"
+if          = "ikiwa" expr "basi" { statement }
+              { "vinginevyo" "ikiwa" expr "basi" { statement } }   # else-if chain
+              [ "vinginevyo" { statement } ] "mwisho"
+              # `vinginevyo ikiwa` is parser-level sugar: it desugars to a nested
+              # `If` as the enclosing branch's `otherwise`. The whole ladder shares
+              # ONE closing `mwisho` (like Python if/elif/else). No new AST node.
 forEach     = "kwa" "kila" IDENT "katika" expr { statement } "mwisho"
 forRange    = "kwa" "kila" IDENT "kutoka" expr "hadi" expr { statement } "mwisho"   # inclusive
 while       = "wakati" expr { statement } "mwisho"
@@ -96,6 +101,8 @@ Tabia na maonyesho ni **sawasawa** kwa interpreter na codegen ya Python.
 - `salio(a, b)` — baki ya mgawanyo (a mod b; ishara hufuata `a`, kama `%`). Kosa ikiwa `b` ni sifuri.
 - `mviringo(x, dp)` — zungusha hadi sehemu `dp` za desimali (nusu → mbali na sifuri). `dp` lazima
   iwe namba kamili isiyo hasi.
+- `mviringo_juu(x)` — namba kamili isiyo chini ya `x` (ceil). `mviringo_chini(x)` — namba kamili
+  isiyozidi `x` (floor). `thamani_kamili(x)` — thamani kamili / chanya ya `x` (absolute value).
 
 **Moduli `maandishi`** (`leta maandishi`):
 - `herufi_kubwa(s)` / `herufi_ndogo(s)` — herufi kubwa / ndogo. `unganisha(orodha, kitenganishi)`
@@ -108,6 +115,7 @@ Tabia na maonyesho ni **sawasawa** kwa interpreter na codegen ya Python.
 - `rudia(s, n)` — rudia `s` mara `n` (`n` kamili isiyo hasi; `0` → `""`).
 - `kata(s, anza, mwisho)` — sehemu ya maandishi `[anza, mwisho)` (mipaka kamili; hasi → 0,
   kubwa kupita → urefu; `anza >= mwisho` → `""`).
+- `pindua(s)` — maandishi yaliyopinduliwa (reverse string).
 
 **Moduli `orodha`** (`leta orodha`):
 - `panga(orodha)` — **nakala** iliyopangwa kwa kupanda (namba kihisabati, maandishi
@@ -121,6 +129,12 @@ Tabia na maonyesho ni **sawasawa** kwa interpreter na codegen ya Python.
 - `kichwa(orodha)` — kipengele cha kwanza (kosa ikiwa orodha ni tupu).
 - `mkia(orodha)` — nakala **MPYA** bila kipengele cha kwanza (kosa ikiwa orodha ni tupu).
 - `panga`/`geuza`/`chukua`/`mkia`/`unganisha_mbili` **hazibadilishi** orodha ya asili (zinarudisha nakala).
+
+**Moduli `kamusi`** (`leta kamusi`):
+- `funguo(kamusi)` — orodha ya funguo (keys), kwa mpangilio wa kuingizwa.
+- `thamani(kamusi)` — orodha ya thamani (values), kwa mpangilio wa kuingizwa.
+- `ina_ufunguo(kamusi, ufunguo)` — je, kamusi ina ufunguo huu? (kweli/si_kweli).
+- `idadi_funguo(kamusi)` — idadi ya funguo katika kamusi (size).
 
 **Moduli `muda`** (`leta muda`): `sasa`, `leo`, `mwaka`, `mwezi`, `siku` — husoma saa halisi
 (si deterministic; majaribio ya golden huyaepuka). **Moduli `faili`**: `soma`, `andika`,

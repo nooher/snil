@@ -98,18 +98,47 @@ export function parse(tokens: Token[]): Program {
     return { kind: 'Input', prompt, name, line };
   }
 
-  // ikiwa expr basi { stmt } [ vinginevyo { stmt } ] mwisho
+  // ikiwa expr basi { stmt }
+  //   [ vinginevyo ikiwa expr basi { stmt } ]*   (else-if chain — desugared)
+  //   [ vinginevyo { stmt } ]
+  // mwisho
+  //
+  // `vinginevyo ikiwa` (else-if) is pure PARSER-LEVEL desugaring: it produces a
+  // nested `If` node as the SOLE statement of the enclosing `otherwise`. The AST,
+  // interpreter, and both code generators already handle nested Ifs — they never
+  // see anything new. The nested If consumes the SHARED closing `mwisho`, so a
+  // whole `ikiwa … vinginevyo ikiwa … vinginevyo … mwisho` chain ends with one
+  // `mwisho`, exactly like Python's if/elif/else or JS's else-if ladder.
   function ifStmt(): If {
     const line = next().line; // ikiwa
+    const node = ifChainLink(line);
+    // The WHOLE chain (ikiwa … vinginevyo ikiwa … vinginevyo …) shares ONE
+    // terminating `mwisho`, consumed once here at the top of the chain.
+    expect(T.MWISHO, '"mwisho"');
+    return node;
+  }
+
+  // Parse one `ikiwa … basi … [vinginevyo …]` after its `ikiwa` keyword has been
+  // consumed, WITHOUT consuming the terminating `mwisho` (the caller owns it).
+  // A `vinginevyo ikiwa` becomes a nested If as this node's sole `otherwise`
+  // statement — pure parser-level desugaring; the AST/interpreter/codegen never
+  // see anything but ordinary nested Ifs.
+  function ifChainLink(line: number): If {
     const cond = expression();
     expect(T.BASI, '"basi"');
     const then = block([T.VINGINEVYO, T.MWISHO]);
     let otherwise: Stmt[] | null = null;
     if (at(T.VINGINEVYO)) {
-      next();
-      otherwise = block([T.MWISHO]);
+      const velse = next().line; // vinginevyo
+      if (at(T.IKIWA)) {
+        // `vinginevyo ikiwa` → desugar to a nested If carrying the rest of the
+        // chain. It does NOT consume `mwisho`; the chain head (ifStmt) does.
+        next(); // ikiwa
+        otherwise = [ifChainLink(velse)];
+      } else {
+        otherwise = block([T.MWISHO]);
+      }
     }
-    expect(T.MWISHO, '"mwisho"');
     return { kind: 'If', cond, then, otherwise, line };
   }
 

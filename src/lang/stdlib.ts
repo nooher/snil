@@ -32,6 +32,14 @@ function asList(v: unknown, fnName: string): unknown[] {
   return v;
 }
 
+/** A SNIL dictionary — represented as a Map<string, value> in the interpreter. */
+function asDict(v: unknown, fnName: string): Map<string, unknown> {
+  if (!(v instanceof Map)) {
+    throw Makosa.ainaMbaya(`Kazi "${fnName}" inahitaji kamusi.`, 0);
+  }
+  return v as Map<string, unknown>;
+}
+
 /** A whole-number index/count (no decimals, no bool). */
 function asInt(v: unknown, fnName: string): number {
   if (typeof v !== 'number' || !Number.isInteger(v)) {
@@ -132,6 +140,12 @@ export const STDLIB: Record<string, Record<string, NativeFn>> = {
       if (dp < 0) throw Makosa.ainaMbaya('Kazi "mviringo" inahitaji idadi ya desimali isiyo hasi.', 0);
       return roundHalfUp(x, dp);
     },
+    // mviringo_juu(x) → namba kamili ndogo kuliko zote isiyo chini ya x (ceil).
+    mviringo_juu: (args) => Math.ceil(asNumber(args[0], 'mviringo_juu')),
+    // mviringo_chini(x) → namba kamili kubwa kuliko zote isiyozidi x (floor).
+    mviringo_chini: (args) => Math.floor(asNumber(args[0], 'mviringo_chini')),
+    // thamani_kamili(x) → thamani kamili / chanya ya namba moja (absolute value).
+    thamani_kamili: (args) => Math.abs(asNumber(args[0], 'thamani_kamili')),
   },
 
   maandishi: {
@@ -183,6 +197,8 @@ export const STDLIB: Record<string, Record<string, NativeFn>> = {
       const x = asString(args[1], 'pata');
       return s.indexOf(x);
     },
+    // pindua(s) → maandishi yaliyopinduliwa (reverse string).
+    pindua: (args) => asString(args[0], 'pindua').split('').reverse().join(''),
     // rudia(s, n) → rudia s mara n. n lazima iwe kamili isiyo hasi.
     rudia: (args) => {
       const s = asString(args[0], 'rudia');
@@ -267,6 +283,27 @@ export const STDLIB: Record<string, Record<string, NativeFn>> = {
       if (list.length === 0) throw Makosa.ainaMbaya('Kazi "mkia" inahitaji orodha isiyo tupu.', 0);
       return list.slice(1);
     },
+  },
+
+  kamusi: {
+    // funguo(kamusi) → orodha ya funguo (keys), kwa mpangilio wa kuingizwa.
+    funguo: (args) => {
+      const d = asDict(args[0], 'funguo');
+      return Array.from(d.keys());
+    },
+    // thamani(kamusi) → orodha ya thamani (values), kwa mpangilio wa kuingizwa.
+    thamani: (args) => {
+      const d = asDict(args[0], 'thamani');
+      return Array.from(d.values());
+    },
+    // ina_ufunguo(kamusi, ufunguo) → je, kamusi ina ufunguo huu? (kweli/si_kweli).
+    ina_ufunguo: (args) => {
+      const d = asDict(args[0], 'ina_ufunguo');
+      const key = asString(args[1], 'ina_ufunguo');
+      return d.has(key);
+    },
+    // idadi_funguo(kamusi) → idadi ya funguo katika kamusi (size).
+    idadi_funguo: (args) => asDict(args[0], 'idadi_funguo').size,
   },
 
   // NOTE: muda reads the real clock — non-deterministic, so golden tests avoid it.

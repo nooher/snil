@@ -298,7 +298,7 @@ function exec(stmt: Stmt, env: Environment, ctx: Ctx): void {
         const mod = STDLIB[stmt.module];
         if (!mod) {
           throw new SnilError(`Moduli "${stmt.module}" haipatikani.`, stmt.line, 'kutekeleza',
-            'moduli zinazopatikana: hisabati, maandishi, muda, faili');
+            'moduli zinazopatikana: hisabati, maandishi, orodha, kamusi, muda, faili');
         }
         for (const [name, fn] of Object.entries(mod)) ctx.builtins.set(name, fn);
         return;

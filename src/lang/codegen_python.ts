@@ -127,6 +127,18 @@ class _Hisabati:
         if dp < 0:
             raise Exception('Kazi "mviringo" inahitaji idadi ya desimali isiyo hasi.')
         return _round_half_up(x, dp)
+    def mviringo_juu(self, x):
+        if isinstance(x, bool) or not isinstance(x, (int, float)):
+            raise Exception('Kazi "mviringo_juu" inahitaji namba.')
+        return _math.ceil(x)
+    def mviringo_chini(self, x):
+        if isinstance(x, bool) or not isinstance(x, (int, float)):
+            raise Exception('Kazi "mviringo_chini" inahitaji namba.')
+        return _math.floor(x)
+    def thamani_kamili(self, x):
+        if isinstance(x, bool) or not isinstance(x, (int, float)):
+            raise Exception('Kazi "thamani_kamili" inahitaji namba.')
+        return abs(x)
 hisabati = _Hisabati()
 
 class _Maandishi:
@@ -140,6 +152,7 @@ class _Maandishi:
     def anza_na(self, s, x): return s.startswith(x)
     def isha_na(self, s, x): return s.endswith(x)
     def pata(self, s, x): return s.find(x)
+    def pindua(self, s): return s[::-1]
     def rudia(self, s, n):
         if isinstance(n, bool) or not isinstance(n, int):
             raise Exception('Kazi "rudia" inahitaji namba kamili.')
@@ -185,6 +198,25 @@ class _Orodha:
             raise Exception('Kazi "mkia" inahitaji orodha isiyo tupu.')
         return list(xs[1:])
 orodha = _Orodha()
+
+class _Kamusi:
+    def funguo(self, d):
+        if not isinstance(d, dict):
+            raise Exception('Kazi "funguo" inahitaji kamusi.')
+        return list(d.keys())
+    def thamani(self, d):
+        if not isinstance(d, dict):
+            raise Exception('Kazi "thamani" inahitaji kamusi.')
+        return list(d.values())
+    def ina_ufunguo(self, d, key):
+        if not isinstance(d, dict):
+            raise Exception('Kazi "ina_ufunguo" inahitaji kamusi.')
+        return key in d
+    def idadi_funguo(self, d):
+        if not isinstance(d, dict):
+            raise Exception('Kazi "idadi_funguo" inahitaji kamusi.')
+        return len(d)
+kamusi = _Kamusi()
 
 class _Muda:
     def sasa(self):

@@ -79,3 +79,18 @@ Wastani ni 61.6
 8 * 5 = 40
 8 / 4 = 2
 ```
+
+## daraja.snil
+```
+Asha: A
+Juma: C
+Neema: D
+Baraka: F
+Wastani: 60.75
+Juu zaidi: 61
+Chini zaidi: 60
+Idadi ya wanafunzi: 4
+Je, kuna Asha? kweli
+Je, kuna Tatu? si_kweli
+AINAZNAT
+```

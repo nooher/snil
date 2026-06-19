@@ -57,6 +57,49 @@ describe('parser — umbo la AST', () => {
     expect(i.otherwise).toBeNull();
   });
 
+  it('vinginevyo ikiwa → desugars to a nested If as the sole otherwise stmt', () => {
+    const p = parseSrc(
+      'ikiwa a basi\n onyesha 1\nvinginevyo ikiwa b basi\n onyesha 2\nmwisho',
+    );
+    const outer = p.body[0] as If;
+    expect(outer.kind).toBe('If');
+    expect(outer.cond).toMatchObject({ kind: 'Ident', name: 'a' });
+    expect(outer.then).toHaveLength(1);
+    // otherwise is EXACTLY one nested If (no new AST node introduced).
+    expect(outer.otherwise).toHaveLength(1);
+    const inner = outer.otherwise![0] as If;
+    expect(inner.kind).toBe('If');
+    expect(inner.cond).toMatchObject({ kind: 'Ident', name: 'b' });
+    expect(inner.then).toHaveLength(1);
+    expect(inner.otherwise).toBeNull();
+  });
+
+  it('vinginevyo ikiwa … vinginevyo → chain ends in a final else, one mwisho', () => {
+    const p = parseSrc(
+      [
+        'ikiwa a basi',
+        '    onyesha 1',
+        'vinginevyo ikiwa b basi',
+        '    onyesha 2',
+        'vinginevyo ikiwa c basi',
+        '    onyesha 3',
+        'vinginevyo',
+        '    onyesha 4',
+        'mwisho',
+      ].join('\n'),
+    );
+    expect(p.body).toHaveLength(1); // the whole ladder is ONE statement
+    const a = p.body[0] as If;
+    const b = a.otherwise![0] as If;
+    const c = b.otherwise![0] as If;
+    expect(a.cond).toMatchObject({ name: 'a' });
+    expect(b.cond).toMatchObject({ name: 'b' });
+    expect(c.cond).toMatchObject({ name: 'c' });
+    // c's otherwise is the final plain `vinginevyo` (a block, not a nested If).
+    expect(c.otherwise).toHaveLength(1);
+    expect((c.otherwise![0] as { kind: string }).kind).toBe('Print');
+  });
+
   it('kazi f(a,b) → FuncDecl yenye vigezo', () => {
     const p = parseSrc('kazi f(a, b)\n rudisha a + b\nmwisho');
     const f = p.body[0] as FuncDecl;

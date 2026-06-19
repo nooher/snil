@@ -163,6 +163,62 @@ describe('SNIL stdlib_ext — extended stdlib parity across all three backends',
     parity(src, '3.14\n3\n1\n-2.68');
   });
 
+  it('hisabati: mviringo_juu / mviringo_chini / thamani_kamili', () => {
+    const src = [
+      'leta hisabati',
+      'onyesha mviringo_juu(2.1)',
+      'onyesha mviringo_juu(-2.1)',
+      'onyesha mviringo_chini(2.9)',
+      'onyesha mviringo_chini(-2.1)',
+      'onyesha thamani_kamili(-7)',
+      'onyesha thamani_kamili(3.5)',
+    ].join('\n');
+    parity(src, '3\n-2\n2\n-3\n7\n3.5');
+  });
+
+  it('maandishi: pindua (reverse string)', () => {
+    const src = [
+      'leta maandishi',
+      'onyesha pindua("Tanzania")',
+      'onyesha pindua("aba")',
+      'onyesha pindua("")',
+    ].join('\n');
+    parity(src, 'ainaznaT\naba\n');
+  });
+
+  it('kamusi: funguo / thamani / ina_ufunguo / idadi_funguo', () => {
+    const src = [
+      'leta kamusi',
+      'weka mtu kuwa { jina: "Asha", umri: 20, mji: "Dodoma" }',
+      'onyesha funguo(mtu)',
+      'onyesha thamani(mtu)',
+      'onyesha ina_ufunguo(mtu, "umri")',
+      'onyesha ina_ufunguo(mtu, "simu")',
+      'onyesha idadi_funguo(mtu)',
+    ].join('\n');
+    parity(src, '[jina, umri, mji]\n[Asha, 20, Dodoma]\nkweli\nsi_kweli\n3');
+  });
+
+  it('vinginevyo ikiwa (else-if ladder) agrees across all three backends', () => {
+    const src = [
+      'kazi alama_herufi(n)',
+      '    ikiwa n >= 80 basi',
+      '        rudisha "A"',
+      '    vinginevyo ikiwa n >= 70 basi',
+      '        rudisha "B"',
+      '    vinginevyo ikiwa n >= 60 basi',
+      '        rudisha "C"',
+      '    vinginevyo',
+      '        rudisha "F"',
+      '    mwisho',
+      'mwisho',
+      'kwa kila s katika [85, 72, 61, 40]',
+      '    onyesha alama_herufi(s)',
+      'mwisho',
+    ].join('\n');
+    parity(src, 'A\nB\nC\nF');
+  });
+
   it('combined: anza_na in a condition + kata + idadi pipeline', () => {
     const src = [
       'leta maandishi',

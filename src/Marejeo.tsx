@@ -10,6 +10,7 @@ const MANENO: { neno: string; maana: string }[] = [
   { neno: 'uliza … kuwa', maana: 'pokea ingizo kutoka kwa mtumiaji' },
   { neno: 'ikiwa … basi', maana: 'sharti (if … then)' },
   { neno: 'vinginevyo', maana: 'sivyo (else)' },
+  { neno: 'vinginevyo ikiwa', maana: 'sharti jingine (else-if)' },
   { neno: 'mwisho', maana: 'funga block lolote' },
   { neno: 'kwa kila … katika', maana: 'pitia kila kitu katika orodha' },
   { neno: 'kwa kila … kutoka … hadi', maana: 'pitia namba (mwisho ujumuishwe)' },
@@ -65,6 +66,16 @@ onyesha "\\{si uingizaji\\}"`,
     onyesha "amefaulu"
 vinginevyo
     onyesha "amefeli"
+mwisho`,
+  },
+  {
+    kichwa: 'vinginevyo ikiwa (else-if)',
+    chanzo: `ikiwa alama >= 80 basi
+    onyesha "A"
+vinginevyo ikiwa alama >= 60 basi
+    onyesha "B"
+vinginevyo
+    onyesha "C"
 mwisho`,
   },
   {
@@ -127,6 +138,9 @@ const MODULI: { jina: string; leta: string; kazi: { kazi: string; maana: string 
       { kazi: 'kipeo_cha_pili(x)', maana: 'x mraba (x × x)' },
       { kazi: 'salio(a, b)', maana: 'baki ya mgawanyo (a mod b)' },
       { kazi: 'mviringo(x, dp)', maana: 'zungusha hadi desimali dp' },
+      { kazi: 'mviringo_juu(x)', maana: 'namba kamili isiyo chini ya x (ceil)' },
+      { kazi: 'mviringo_chini(x)', maana: 'namba kamili isiyozidi x (floor)' },
+      { kazi: 'thamani_kamili(x)', maana: 'thamani kamili / chanya (absolute)' },
     ],
   },
   {
@@ -145,6 +159,7 @@ const MODULI: { jina: string; leta: string; kazi: { kazi: string; maana: string 
       { kazi: 'pata(s, x)', maana: 'fahirisi ya x ndani ya s (-1 ikiwa haipo)' },
       { kazi: 'rudia(s, n)', maana: 'rudia s mara n' },
       { kazi: 'kata(s, anza, mwisho)', maana: 'sehemu ya maandishi [anza, mwisho)' },
+      { kazi: 'pindua(s)', maana: 'maandishi yaliyopinduliwa (reverse)' },
     ],
   },
   {
@@ -159,6 +174,16 @@ const MODULI: { jina: string; leta: string; kazi: { kazi: string; maana: string 
       { kazi: 'unganisha_mbili(a, b)', maana: 'orodha mpya ya a + b' },
       { kazi: 'kichwa(orodha)', maana: 'kipengele cha kwanza' },
       { kazi: 'mkia(orodha)', maana: 'nakala bila kipengele cha kwanza' },
+    ],
+  },
+  {
+    jina: 'kamusi',
+    leta: 'leta kamusi',
+    kazi: [
+      { kazi: 'funguo(kamusi)', maana: 'orodha ya funguo (keys)' },
+      { kazi: 'thamani(kamusi)', maana: 'orodha ya thamani (values)' },
+      { kazi: 'ina_ufunguo(kamusi, ufunguo)', maana: 'je, kamusi ina ufunguo huu?' },
+      { kazi: 'idadi_funguo(kamusi)', maana: 'idadi ya funguo (size)' },
     ],
   },
   {

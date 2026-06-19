@@ -74,6 +74,33 @@ describe('formatSnil — re-indentation', () => {
     expect(formatSnil(messy)).toBe(expected);
   });
 
+  it('keeps a vinginevyo ikiwa (else-if) ladder flat — one line, one mwisho', () => {
+    const messy = [
+      'ikiwa a basi',
+      'onyesha 1',
+      'vinginevyo ikiwa b basi',
+      'onyesha 2',
+      'vinginevyo ikiwa c basi',
+      'onyesha 3',
+      'vinginevyo',
+      'onyesha 4',
+      'mwisho',
+    ].join('\n');
+    const expected = [
+      'ikiwa a basi',
+      '    onyesha 1',
+      'vinginevyo ikiwa b basi',
+      '    onyesha 2',
+      'vinginevyo ikiwa c basi',
+      '    onyesha 3',
+      'vinginevyo',
+      '    onyesha 4',
+      'mwisho',
+      '',
+    ].join('\n');
+    expect(formatSnil(messy)).toBe(expected);
+  });
+
   it('handles jaribu / kosa blocks', () => {
     const messy = ['jaribu', 'onyesha 1', 'kosa', 'onyesha 2', 'mwisho'].join('\n');
     const expected = ['jaribu', '    onyesha 1', 'kosa', '    onyesha 2', 'mwisho', ''].join('\n');

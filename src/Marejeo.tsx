@@ -247,6 +247,29 @@ const MODULI: { jina: string; leta: string; kazi: { kazi: string; maana: string 
   },
 ];
 
+// ---- pakeji za kawaida: rejista iliyofungashwa, nje ya mtandao (offline) ----
+// Huletwa kwa: leta "jina_la_pakeji"  (faili za workspace zina kipaumbele).
+const PAKEJI: { jina: string; toleo: string; maelezo: string; kazi: string[] }[] = [
+  {
+    jina: 'tarehe',
+    toleo: '1.0.0',
+    maelezo: 'Hesabu za kalenda (deterministic; hakuna saa halisi).',
+    kazi: ['mwaka_mrefu(m)', 'siku_za_mwezi(mwaka, mwezi)', 'siku_za_mwaka(mwaka)', 'jina_la_siku(n)', 'siku_ya_juma(mwaka, mwezi, siku)'],
+  },
+  {
+    jina: 'jiometri',
+    toleo: '1.0.0',
+    maelezo: 'Eneo na mzingo, na Pythagoras.',
+    kazi: ['eneo_duara(r)', 'mzingo_duara(r)', 'eneo_mstatili(u, p)', 'eneo_pembetatu(msingi, kimo)', 'pythagoras(a, b)'],
+  },
+  {
+    jina: 'takwimu',
+    toleo: '1.0.0',
+    maelezo: 'Takwimu juu ya orodha ya namba.',
+    kazi: ['wastani(orodha)', 'wastani_kati(orodha)', 'modi(orodha)', 'kiwango(orodha)'],
+  },
+];
+
 export function Marejeo() {
   return (
     <div className="marejeo">
@@ -361,6 +384,35 @@ export function Marejeo() {
                   <tr key={k.kazi}>
                     <td className="mono">{k.kazi}</td>
                     <td>{k.maana}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ))}
+      </section>
+
+      <section className="marejeo-sehemu">
+        <h2 className="marejeo-h2">Pakeji (rejista ya kawaida)</h2>
+        <p className="marejeo-sehemu-maelezo">
+          Maktaba zinazoshirikiwa, zimefungashwa nje ya mtandao. Huletwa kwa{' '}
+          <code className="mono">leta "jina"</code> (faili za workspace zina
+          kipaumbele juu ya pakeji). Tazama <code className="mono">PACKAGES.md</code>.
+        </p>
+        {PAKEJI.map((p) => (
+          <div className="marejeo-moduli" key={p.jina}>
+            <h3 className="marejeo-h3">
+              Pakeji <span className="mono">{p.jina}</span>
+              <span className="marejeo-leta mono">leta "{p.jina}"</span>
+            </h3>
+            <p className="marejeo-sehemu-maelezo">
+              <span className="mono">v{p.toleo}</span> — {p.maelezo}
+            </p>
+            <table className="marejeo-jedwali">
+              <tbody>
+                {p.kazi.map((k) => (
+                  <tr key={k}>
+                    <td className="mono">{k}</td>
                   </tr>
                 ))}
               </tbody>

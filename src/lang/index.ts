@@ -6,8 +6,18 @@ import { interpret, createSession, displayString } from './interpreter';
 import { generatePython } from './codegen_python';
 import { generateJS } from './codegen_js';
 import { SnilError } from './errors';
+import { combineResolvers, standardRegistryResolver } from './packages/registry';
 import type { Program } from './ast';
 import type { SnilIO, RunResult, ModuleResolver } from './runtime';
+
+export {
+  STANDARD_REGISTRY,
+  registryResolver,
+  combineResolvers,
+  resolveFromRegistry,
+  standardRegistryResolver,
+} from './packages/registry';
+export type { Registry, SnilPackage } from './packages/registry';
 
 export { tokenize } from './lexer';
 export { SnilError } from './errors';
@@ -66,7 +76,10 @@ export function run(source: string, io: Partial<SnilIO> = {}): RunResult {
     uliza: io.uliza ?? (() => ''),
     somaFaili: io.somaFaili,
     andikaFaili: io.andikaFaili,
-    somaModuli: io.somaModuli,
+    // Layer the bundled standard package registry AFTER any caller resolver, so a
+    // local/workspace module always shadows a package, but `leta "takwimu"` works
+    // even with no explicit resolver. (browser/CLI pass their own combined resolver.)
+    somaModuli: combineResolvers(io.somaModuli, standardRegistryResolver),
   };
   try {
     interpret(parse(source), fullIO);
@@ -79,10 +92,10 @@ export function run(source: string, io: Partial<SnilIO> = {}): RunResult {
 
 /** Source → equivalent Python (first compilation target). Throws SnilError on syntax errors. */
 export function toPython(source: string, somaModuli?: ModuleResolver): string {
-  return generatePython(parse(source), somaModuli);
+  return generatePython(parse(source), combineResolvers(somaModuli, standardRegistryResolver));
 }
 
 /** Source → equivalent JavaScript (ES2020, runnable via `node`). Throws SnilError on syntax errors. */
 export function toJS(source: string, somaModuli?: ModuleResolver): string {
-  return generateJS(parse(source), somaModuli);
+  return generateJS(parse(source), combineResolvers(somaModuli, standardRegistryResolver));
 }

@@ -23,6 +23,52 @@ const { run, toPython, SnilError } = await import('../src/lang/index.ts');
 const { formatError } = await import('../src/lang/diagnose.ts');
 const { nodeIO, fsModuleResolver } = await import('../src/lang/node_io.ts');
 const { formatSnil } = await import('../src/lang/format.ts');
+const { combineResolvers, registryResolver, standardRegistryResolver } = await import(
+  '../src/lang/packages/registry.ts'
+);
+type ModuleResolver = import('../src/lang/runtime.ts').ModuleResolver;
+type Registry = import('../src/lang/packages/registry.ts').Registry;
+
+/**
+ * The module resolver used by `endesha` / `tengeneza`. Precedence (first wins):
+ *   1. local files relative to the entry file's directory  (fsModuleResolver)
+ *   2. an optional `snil_pakeji/` directory next to the entry file — a place to
+ *      drop extra packages as `snil_pakeji/<pkg>/<module>.snil` or
+ *      `snil_pakeji/<pkg>.snil` (resolved like ordinary files)
+ *   3. the bundled STANDARD registry (tarehe / jiometri / takwimu), offline.
+ * So a local module ALWAYS shadows a package of the same name.
+ */
+function cliResolver(baseDir: string): ModuleResolver {
+  const pakejiDir = nodePath.join(baseDir, 'snil_pakeji');
+  const layers: (ModuleResolver | null)[] = [fsModuleResolver(baseDir)];
+  try {
+    if (fs.statSync(pakejiDir).isDirectory()) {
+      // Read any *.snil under snil_pakeji/ into an ad-hoc registry so that
+      // `snil_pakeji/foo/foo.snil` is importable as `leta "foo"`.
+      const reg: Registry = {};
+      for (const entry of fs.readdirSync(pakejiDir, { withFileTypes: true })) {
+        if (entry.isDirectory()) {
+          const sub = nodePath.join(pakejiDir, entry.name);
+          const modules: Record<string, string> = {};
+          for (const f of fs.readdirSync(sub)) {
+            if (f.endsWith('.snil')) {
+              modules[f.replace(/\.snil$/, '')] = fs.readFileSync(nodePath.join(sub, f), 'utf-8');
+            }
+          }
+          if (Object.keys(modules).length) reg[entry.name] = { version: 'local', maelezo: '', modules };
+        } else if (entry.isFile() && entry.name.endsWith('.snil')) {
+          const nm = entry.name.replace(/\.snil$/, '');
+          reg[nm] = { version: 'local', maelezo: '', modules: { [nm]: fs.readFileSync(nodePath.join(pakejiDir, entry.name), 'utf-8') } };
+        }
+      }
+      if (Object.keys(reg).length) layers.push(registryResolver(reg));
+    }
+  } catch {
+    // no snil_pakeji/ — fine.
+  }
+  layers.push(standardRegistryResolver);
+  return combineResolvers(...layers);
+}
 
 const TOLEO = 'SNIL 0.1';
 
@@ -67,7 +113,7 @@ function amriEndesha(args: string[]): void {
   const source = somaChanzo(path);
   // File imports (`leta "jina"`) resolve relative to the entry file's directory.
   const baseDir = nodePath.dirname(path);
-  const result = run(source, { ...nodeIO(), somaModuli: fsModuleResolver(baseDir) }); // output streams via nodeIO.andika
+  const result = run(source, { ...nodeIO(), somaModuli: cliResolver(baseDir) }); // output streams via nodeIO.andika
   if (result.error) {
     process.stderr.write(formatError(source, result.error) + '\n');
     process.exit(1);
@@ -97,8 +143,8 @@ function amriTengeneza(args: string[]): void {
   const source = somaChanzo(path);
   let python: string;
   try {
-    // Inline file imports relative to the entry file's directory into the output.
-    python = toPython(source, fsModuleResolver(nodePath.dirname(path)));
+    // Inline file imports + packages relative to the entry file's directory.
+    python = toPython(source, cliResolver(nodePath.dirname(path)));
   } catch (e) {
     const err = e instanceof SnilError
       ? e

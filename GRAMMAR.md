@@ -181,6 +181,26 @@ ulinganifu ni wa thamani (sawa na `orodha.ina`/`fahirisi`, wa kina kwa orodha/ka
 (si deterministic; majaribio ya golden huyaepuka). **Moduli `faili`**: `soma`, `andika`,
 `ipo`, `futa`.
 
+## Pakeji (Packages) — `leta "pkg"`
+Mbali na faili za ndani (`leta "faili"`) na moduli za maktaba (`leta jina`), SNIL
+ina **rejista ya pakeji** (package registry): maktaba zinazoshirikiwa, zimefungashwa
+nje ya mtandao. Huletwa kwa `leta "jina_la_pakeji"`:
+```
+leta "takwimu"
+onyesha wastani([2, 4, 6])   # 4
+```
+- `leta "pkg"` huleta moduli kuu ya pakeji (ile yenye jina sawa na pakeji); `leta "pkg/moduli"`
+  huleta moduli mahususi. Kazi/`weka` za juu huwa **majina bayana**, kama moduli ya faili.
+- **Kipaumbele cha kutafuta moduli**: faili ya workspace/ndani → pakeji ya rejista →
+  kosa (`Moduli "…" haijapatikana.`). Kwa hiyo faili ya ndani **huficha** pakeji ya jina sawa.
+- Backend zote tatu (interpreter, Python, JS) huleta pakeji **vivyo hivyo** (codegen
+  hupachika moduli zilizotatuliwa kwa mpangilio wa utegemezi, salama dhidi ya mizunguko).
+
+**Rejista ya kawaida (bundled, offline):** `tarehe` (kalenda — `mwaka_mrefu`, `siku_za_mwezi`,
+`siku_ya_juma`, …), `jiometri` (`eneo_duara`, `eneo_pembetatu`, `pythagoras`, …), `takwimu`
+(`wastani`, `wastani_kati`, `modi`, `kiwango`). Zote ni **deterministic** (hakuna saa/IO).
+Tazama `PACKAGES.md` kwa muundo wa rejista na jinsi ya kuongeza pakeji.
+
 ## Golden programs
 See `examples/*.snil` and `examples/EXPECTED.md` — every component must make these
 produce exactly the listed output.

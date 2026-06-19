@@ -3,6 +3,7 @@
 // src/lang (parse/run/toPython); never reimplements the language.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { run, toPython, toJS, createReplSession } from './lang';
+import { combineResolvers, standardRegistryResolver } from './lang';
 import type { SnilError } from './lang';
 import { formatError } from './lang/diagnose';
 import { formatSnil } from './lang/format';
@@ -588,14 +589,16 @@ function Playground() {
   // Idadi ya mistari kwa gutter ya mhariri.
   const mistari = useMemo(() => code.split('\n').length, [code]);
 
-  // Resolver: leta "salamu" → tafuta faili "salamu" au "salamu.snil".
+  // Resolver: leta "x" → kwanza faili za workspace (zinazoweza kuficha pakeji),
+  // kisha pakeji za rejista ya kawaida (tarehe / jiometri / takwimu).
   const somaModuli = useMemo(() => {
-    return (name: string): string | null => {
+    const workspace = (name: string): string | null => {
       const f =
         faili.find((x) => x.name === name) ??
         faili.find((x) => x.name === name + '.snil');
       return f ? f.code : null;
     };
+    return combineResolvers(workspace, standardRegistryResolver);
   }, [faili]);
 
   function setCode(mpya: string) {

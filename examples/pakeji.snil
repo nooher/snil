@@ -1,0 +1,21 @@
+# pakeji.snil — kutumia pakeji za kawaida (standard packages) za SNIL.
+# Pakeji huletwa kwa: leta "jina_la_pakeji"  (faili za ndani zina kipaumbele).
+leta "takwimu"
+leta "jiometri"
+leta "tarehe"
+
+weka alama kuwa [75, 48, 90, 33, 62, 90]
+
+onyesha "Wastani: " + wastani(alama)
+onyesha "Wastani wa kati: " + wastani_kati(alama)
+onyesha "Modi: " + modi(alama)
+onyesha "Kiwango: " + kiwango(alama)
+
+onyesha "Eneo la duara (r=2): " + eneo_duara(2)
+onyesha "Eneo la pembetatu (6x4): " + eneo_pembetatu(6, 4)
+onyesha "Pythagoras (3,4): " + pythagoras(3, 4)
+
+onyesha "Siku za Februari 2024: " + siku_za_mwezi(2024, 2)
+onyesha "Siku za Februari 2023: " + siku_za_mwezi(2023, 2)
+onyesha "2000 ni mwaka mrefu? " + mwaka_mrefu(2000)
+onyesha "Siku ya juma 2024-02-29: " + siku_ya_juma(2024, 2, 29)

@@ -7,6 +7,21 @@ Kila kipengele (interpreter NA Python codegen) lazima kitoe matokeo haya HASA.
 Habari Dunia
 ```
 
+## pakeji.snil
+```
+Wastani: 66.33333333333333
+Wastani wa kati: 68.5
+Modi: 90
+Kiwango: 57
+Eneo la duara (r=2): 12.566370614359172
+Eneo la pembetatu (6x4): 12
+Pythagoras (3,4): 5
+Siku za Februari 2024: 29
+Siku za Februari 2023: 28
+2000 ni mwaka mrefu? kweli
+Siku ya juma 2024-02-29: Alhamisi
+```
+
 ## hesabu.snil
 ```
 Jumla ni 15

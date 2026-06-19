@@ -27,3 +27,55 @@ papai
 Ali
 Jumla ya bei ni 1800
 ```
+
+## fizzbuzz.snil
+```
+1
+2
+Fiza
+4
+Buzi
+Fiza
+7
+8
+Fiza
+Buzi
+11
+Fiza
+13
+14
+FizaBuzi
+16
+17
+Fiza
+19
+Buzi
+```
+
+## wastani.snil
+```
+Alama 75: amefaulu
+Alama 48: amefeli
+Alama 90: amefaulu
+Alama 33: amefeli
+Alama 62: amefaulu
+Jumla ya alama ni 308
+Wastani ni 61.6
+```
+
+## pembetatu.snil
+```
+*
+**
+***
+****
+*****
+```
+
+## kikokotoo.snil
+```
+8 + 5 = 13
+8 - 5 = 3
+8 * 5 = 40
+8 / 4 = 2
+```

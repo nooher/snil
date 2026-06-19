@@ -5,5 +5,7 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   server: { port: 5200 },
-  test: { environment: 'node', include: ['src/**/*.test.ts'] },
+  // fileParallelism off: cli.test.ts spawns node subprocesses; running test files
+  // in parallel caused subprocess contention. Suite is fast (~7s) so this is fine.
+  test: { environment: 'node', include: ['src/**/*.test.ts'], fileParallelism: false },
 } as never);

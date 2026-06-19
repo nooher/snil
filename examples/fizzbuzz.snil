@@ -1,0 +1,17 @@
+# FizaBuzi — hesabu 1 hadi 20.
+# "Fiza" kwa vizidisho vya 3, "Buzi" kwa vya 5, "FizaBuzi" kwa vyote viwili.
+kwa kila n kutoka 1 hadi 20
+    ikiwa n % 3 == 0 na n % 5 == 0 basi
+        onyesha "FizaBuzi"
+    vinginevyo
+        ikiwa n % 3 == 0 basi
+            onyesha "Fiza"
+        vinginevyo
+            ikiwa n % 5 == 0 basi
+                onyesha "Buzi"
+            vinginevyo
+                onyesha n
+            mwisho
+        mwisho
+    mwisho
+mwisho

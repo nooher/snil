@@ -4,6 +4,7 @@
 import { useMemo, useState } from 'react';
 import { run, toPython } from './lang';
 import type { SnilError } from './lang';
+import { formatError } from './lang/diagnose';
 
 // --- Mifano (examples) — chanzo cha .snil kimewekwa hapa moja kwa moja ---
 const MIFANO: { id: string; jina: string; maelezo: string; chanzo: string }[] = [
@@ -226,7 +227,7 @@ export function App() {
             {kichupo === 'matokeo' ? (
               <div className="paneli-eneo">
                 {kosa ? (
-                  <pre className="kosa">{kosa.toString()}</pre>
+                  <pre className="kosa">{formatError(code, kosa)}</pre>
                 ) : output ? (
                   <pre className="matokeo">{output}</pre>
                 ) : (

@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "snil": "node --experimental-strip-types scripts/snil.ts"
+    "snil": "node --experimental-transform-types --disable-warning=ExperimentalWarning scripts/snil.ts"
   },
   "dependencies": {
     "react": "^19.0.0",

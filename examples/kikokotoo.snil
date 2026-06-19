@@ -1,0 +1,21 @@
+# Kikokotoo kidogo — kazi za jumlisha, toa, zidisha, na gawanya.
+kazi jumlisha(x, y)
+    rudisha x + y
+mwisho
+
+kazi toa(x, y)
+    rudisha x - y
+mwisho
+
+kazi zidisha(x, y)
+    rudisha x * y
+mwisho
+
+kazi gawanya(x, y)
+    rudisha x / y
+mwisho
+
+onyesha "8 + 5 = " + jumlisha(8, 5)
+onyesha "8 - 5 = " + toa(8, 5)
+onyesha "8 * 5 = " + zidisha(8, 5)
+onyesha "8 / 4 = " + gawanya(8, 4)

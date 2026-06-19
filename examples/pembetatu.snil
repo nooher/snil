@@ -1,0 +1,9 @@
+# Pembetatu ya nyota — vitanzi vilivyoingiana (nested loops).
+# Kila safu ina nyota zaidi kuliko iliyotangulia.
+kwa kila safu kutoka 1 hadi 5
+    weka mstari kuwa ""
+    kwa kila nyota kutoka 1 hadi safu
+        mstari = mstari + "*"
+    mwisho
+    onyesha mstari
+mwisho

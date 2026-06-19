@@ -58,6 +58,38 @@ def _gawanya(a, b):
 def _idadi(x):
     return len(x)
 
+# ── Global builtins (no leta): namba, maandishi, mzunguko, kamili ──
+def namba(x):
+    if isinstance(x, bool):
+        raise Exception('Kazi "namba" inahitaji maandishi au namba.')
+    if isinstance(x, (int, float)):
+        return x
+    if isinstance(x, str):
+        t = x.strip()
+        try:
+            v = float(t)
+        except ValueError:
+            raise Exception('Kazi "namba" haiwezi kugeuza "' + x + '" kuwa namba.')
+        if v.is_integer():
+            return int(v)
+        return v
+    raise Exception('Kazi "namba" inahitaji maandishi au namba.')
+
+def _maandishi(x):
+    return _str(x)
+
+def mzunguko(x):
+    if isinstance(x, bool) or not isinstance(x, (int, float)):
+        raise Exception('Kazi "mzunguko" inahitaji namba.')
+    # Round half toward +infinity to match SNIL/JS Math.round semantics.
+    import math as _m
+    return int(_m.floor(x + 0.5))
+
+def kamili(x):
+    if isinstance(x, bool) or not isinstance(x, (int, float)):
+        raise Exception('Kazi "kamili" inahitaji namba.')
+    return abs(x)
+
 # ── SNIL stdlib (leta hisabati / maandishi / muda / faili) ──
 class _Hisabati:
     def jumla(self, xs): return sum(xs)
@@ -65,6 +97,7 @@ class _Hisabati:
     def kiwango_cha_juu(self, xs): return max(xs)
     def kiwango_cha_chini(self, xs): return min(xs)
     def mzizi(self, x): return _math.sqrt(x)
+    def kipeo(self, base, exp): return base ** exp
 hisabati = _Hisabati()
 
 class _Maandishi:
@@ -72,7 +105,22 @@ class _Maandishi:
     def herufi_ndogo(self, s): return s.lower()
     def unganisha(self, xs, sep=""): return sep.join(_str(i) for i in xs)
     def gawanya(self, s, sep=" "): return s.split(sep)
+    def ina(self, s, part): return part in s
+    def badilisha(self, s, old, neu): return s.replace(old, neu)
+    def ondoa_nafasi(self, s): return s.strip()
 maandishi = _Maandishi()
+
+class _Orodha:
+    def panga(self, xs):
+        copy = list(xs)
+        all_num = all(isinstance(x, (int, float)) and not isinstance(x, bool) for x in copy)
+        all_str = all(isinstance(x, str) for x in copy)
+        if not all_num and not all_str:
+            raise Exception('Kazi "panga" inahitaji orodha ya namba pekee au maandishi pekee.')
+        return sorted(copy)
+    def geuza(self, xs): return list(xs)[::-1]
+    def ina(self, xs, kitu): return kitu in xs
+orodha = _Orodha()
 
 class _Muda:
     def sasa(self):
@@ -333,6 +381,10 @@ export function generatePython(program: Program): string {
     const args = e.args.map(expr).join(', ');
     // Global builtins available without `leta`.
     if (e.callee === 'idadi') return `_idadi(${args})`;
+    // `maandishi` is BOTH a global builtin and a module name; the module instance
+    // (maandishi = _Maandishi()) would shadow the builtin, so route the global
+    // display-string builtin to its underscored prelude function (like _idadi).
+    if (e.callee === 'maandishi') return `_maandishi(${args})`;
     return `${safeName(e.callee)}(${args})`;
   }
 

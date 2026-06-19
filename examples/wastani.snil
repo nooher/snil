@@ -1,0 +1,16 @@
+# Wastani wa alama za wanafunzi.
+# Tunahesabu jumla na wastani, kisha tunaonyesha kufaulu/kufeli kwa kila mwanafunzi.
+weka alama kuwa [75, 48, 90, 33, 62]
+weka jumla kuwa 0
+
+kwa kila a katika alama
+    jumla = jumla + a
+    ikiwa a >= 50 basi
+        onyesha "Alama " + a + ": amefaulu"
+    vinginevyo
+        onyesha "Alama " + a + ": amefeli"
+    mwisho
+mwisho
+
+onyesha "Jumla ya alama ni " + jumla
+onyesha "Wastani ni " + (jumla / idadi(alama))

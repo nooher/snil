@@ -62,6 +62,12 @@ export const STDLIB: Record<string, Record<string, NativeFn>> = {
       if (n < 0) throw Makosa.ainaMbaya('Kazi "mzizi" haiwezi kuchukua mzizi wa namba hasi.', 0);
       return Math.sqrt(n);
     },
+    // kipeo(msingi, kipeo) → msingi ^ kipeo (power).
+    kipeo: (args) => {
+      const base = asNumber(args[0], 'kipeo');
+      const exp = asNumber(args[1], 'kipeo');
+      return Math.pow(base, exp);
+    },
   },
 
   maandishi: {
@@ -79,6 +85,55 @@ export const STDLIB: Record<string, Record<string, NativeFn>> = {
       const s = asString(args[0], 'gawanya');
       const sep = args.length > 1 ? asString(args[1], 'gawanya') : '';
       return sep === '' ? s.split('') : s.split(sep);
+    },
+    // ina(maneno, sehemu) → je, maneno yana sehemu? (contains, bool).
+    ina: (args) => {
+      const s = asString(args[0], 'ina');
+      const part = asString(args[1], 'ina');
+      return s.includes(part);
+    },
+    // badilisha(maneno, ya_zamani, mpya) → badilisha matukio yote (replace all).
+    badilisha: (args) => {
+      const s = asString(args[0], 'badilisha');
+      const old = asString(args[1], 'badilisha');
+      const neu = asString(args[2], 'badilisha');
+      return s.split(old).join(neu);
+    },
+    // ondoa_nafasi(maneno) → ondoa nafasi za mwanzo na mwisho (trim).
+    ondoa_nafasi: (args) => asString(args[0], 'ondoa_nafasi').trim(),
+  },
+
+  orodha: {
+    // panga(orodha) → nakala iliyopangwa kwa kupanda (sorted copy, ascending).
+    // Namba hupangwa kihisabati; maandishi hupangwa kialfabeti. Orodha lazima iwe
+    // ya aina moja (yote namba AU yote maandishi).
+    panga: (args) => {
+      const list = args[0];
+      if (!Array.isArray(list)) throw Makosa.ainaMbaya('Kazi "panga" inahitaji orodha.', 0);
+      const copy = list.slice();
+      const allNum = copy.every((x) => typeof x === 'number');
+      const allStr = copy.every((x) => typeof x === 'string');
+      if (!allNum && !allStr) {
+        throw Makosa.ainaMbaya('Kazi "panga" inahitaji orodha ya namba pekee au maandishi pekee.', 0);
+      }
+      if (allNum) {
+        copy.sort((a, b) => (a as number) - (b as number));
+      } else {
+        copy.sort((a, b) => ((a as string) < (b as string) ? -1 : (a as string) > (b as string) ? 1 : 0));
+      }
+      return copy;
+    },
+    // geuza(orodha) → nakala iliyopinduliwa (reversed copy).
+    geuza: (args) => {
+      const list = args[0];
+      if (!Array.isArray(list)) throw Makosa.ainaMbaya('Kazi "geuza" inahitaji orodha.', 0);
+      return list.slice().reverse();
+    },
+    // ina(orodha, kitu) → je, orodha ina kitu? (contains, bool).
+    ina: (args) => {
+      const list = args[0];
+      if (!Array.isArray(list)) throw Makosa.ainaMbaya('Kazi "ina" inahitaji orodha.', 0);
+      return list.includes(args[1]);
     },
   },
 
@@ -123,21 +178,52 @@ export const STDLIB: Record<string, Record<string, NativeFn>> = {
   },
 };
 
-/** Length of a list or string — available globally, no `leta` needed. */
+/** Global builtins — available everywhere, no `leta` needed. */
 export const BUILTINS: Record<string, NativeFn> = {
   idadi: (args) => {
     const v = args[0];
     if (Array.isArray(v) || typeof v === 'string') return v.length;
     throw Makosa.ainaMbaya('Kazi "idadi" inahitaji orodha au maandishi.', 0);
   },
+  // namba(x) → geuza kuwa namba (string/number → number).
+  namba: (args) => {
+    const v = args[0];
+    if (typeof v === 'number') return v;
+    if (typeof v === 'string') {
+      const t = v.trim();
+      const n = Number(t);
+      if (t === '' || Number.isNaN(n)) {
+        throw Makosa.ainaMbaya(`Kazi "namba" haiwezi kugeuza "${v}" kuwa namba.`, 0);
+      }
+      return n;
+    }
+    throw Makosa.ainaMbaya('Kazi "namba" inahitaji maandishi au namba.', 0);
+  },
+  // maandishi(x) → mfuatano wa kuonyesha wa SNIL (SNIL display string of x).
+  maandishi: (args) => snilDisplay(args[0]),
+  // mzunguko(x) → karibu na nambari kamili (round to nearest integer).
+  mzunguko: (args) => Math.round(asNumber(args[0], 'mzunguko')),
+  // kamili(x) → thamani kamili / chanya (absolute value).
+  kamili: (args) => Math.abs(asNumber(args[0], 'kamili')),
 };
 
-// Minimal display for join (mirrors interpreter display rules for primitives).
-function stringifyForJoin(v: unknown): string {
+// Full SNIL display string — mirrors interpreter displayString rules:
+// ints have no ".0", kweli/si_kweli/tupu, lists [a, b, c], dicts {k: v}.
+function snilDisplay(v: unknown): string {
   if (v === null || v === undefined) return 'tupu';
   if (v === true) return 'kweli';
   if (v === false) return 'si_kweli';
   if (typeof v === 'number') return String(v);
   if (typeof v === 'string') return v;
+  if (Array.isArray(v)) return '[' + v.map(snilDisplay).join(', ') + ']';
+  if (typeof v === 'object') {
+    const entries = Object.entries(v as Record<string, unknown>);
+    return '{' + entries.map(([k, val]) => `${k}: ${snilDisplay(val)}`).join(', ') + '}';
+  }
   return String(v);
+}
+
+// Minimal display for join (mirrors interpreter display rules for primitives).
+function stringifyForJoin(v: unknown): string {
+  return snilDisplay(v);
 }

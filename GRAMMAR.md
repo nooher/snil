@@ -60,6 +60,41 @@ exprStmt    = expr                            # usually a call
 - Truthiness in `ikiwa`/`wakati`: `si_kweli`, `tupu`, `0`, `""`, empty list = false; else true.
 - Unknown variable/function, type errors, etc. → `SnilError` in Kiswahili with line number.
 
+## Maktaba ya kawaida (Standard library)
+Kazi za moduli zinapatikana baada ya `leta MODULI` na huitwa kwa **jina bayana** (mfano,
+baada ya `leta hisabati` unaita `jumla(orodha)` moja kwa moja, si `hisabati.jumla`).
+Tabia na maonyesho ni **sawasawa** kwa interpreter na codegen ya Python.
+
+**Kazi za kila mahali (BUILTINS — hazihitaji `leta`):**
+- `idadi(x)` — urefu wa orodha au maandishi.
+- `namba(x)` — geuza kuwa namba (maandishi/namba → namba; kosa la Kiswahili ikiwa
+  maandishi si namba halali, mfano `namba("abc")`).
+- `maandishi(x)` — mfuatano wa kuonyesha wa SNIL wa `x` (kamili bila `.0`, orodha/kamusi
+  katika muundo wa SNIL, `kweli`/`si_kweli`/`tupu`).
+- `mzunguko(x)` — zungusha hadi nambari kamili iliyo karibu (nusu → juu, mfano `2.5`→`3`).
+- `kamili(x)` — thamani kamili / chanya (absolute value).
+
+**Moduli `hisabati`** (`leta hisabati`):
+- `jumla(orodha)` — jumla. `wastani(orodha)` — wastani. `kiwango_cha_juu` / `kiwango_cha_chini`
+  — kubwa / ndogo. `mzizi(x)` — mzizi wa pili. `kipeo(msingi, kipeo)` — msingi kwa kipeo (power).
+
+**Moduli `maandishi`** (`leta maandishi`):
+- `herufi_kubwa(s)` / `herufi_ndogo(s)` — herufi kubwa / ndogo. `unganisha(orodha, kitenganishi)`
+  — unganisha. `gawanya(maandishi, kitenganishi)` — gawanya.
+- `ina(maneno, sehemu)` — je, maneno yana sehemu? (kweli/si_kweli).
+- `badilisha(maneno, ya_zamani, mpya)` — badilisha matukio yote.
+- `ondoa_nafasi(maneno)` — ondoa nafasi za mwanzo na mwisho (trim).
+
+**Moduli `orodha`** (`leta orodha`):
+- `panga(orodha)` — **nakala** iliyopangwa kwa kupanda (namba kihisabati, maandishi
+  kialfabeti; orodha lazima iwe ya aina moja — yote namba AU yote maandishi).
+- `geuza(orodha)` — **nakala** iliyopinduliwa. `ina(orodha, kitu)` — je, orodha ina kitu?
+- `panga`/`geuza` **hazibadilishi** orodha ya asili (zinarudisha nakala).
+
+**Moduli `muda`** (`leta muda`): `sasa`, `leo`, `mwaka`, `mwezi`, `siku` — husoma saa halisi
+(si deterministic; majaribio ya golden huyaepuka). **Moduli `faili`**: `soma`, `andika`,
+`ipo`, `futa`.
+
 ## Golden programs
 See `examples/*.snil` and `examples/EXPECTED.md` — every component must make these
 produce exactly the listed output.

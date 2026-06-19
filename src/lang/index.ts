@@ -2,7 +2,7 @@
 // use ONLY these. Pipeline:  source → tokenize → parse → (interpret | toPython).
 import { tokenize } from './lexer';
 import { parse as parseTokens } from './parser';
-import { interpret } from './interpreter';
+import { interpret, createSession, displayString } from './interpreter';
 import { generatePython } from './codegen_python';
 import { generateJS } from './codegen_js';
 import { SnilError } from './errors';
@@ -14,6 +14,44 @@ export { SnilError } from './errors';
 export type { Token } from './tokens';
 export type { Program } from './ast';
 export type { SnilIO, RunResult, ModuleResolver } from './runtime';
+export type { SnilValue, SnilSession } from './interpreter';
+
+/** One line evaluated in an interactive session. */
+export interface ReplResult {
+  output: string;          // everything `onyesha` produced this line, joined by "\n"
+  value?: string;          // displayed form of a bare-expression result (undefined for statements)
+  error: SnilError | null; // Kiswahili error, if any — session stays alive
+}
+
+/** An interactive REPL ("Jaribio"): state persists across `eval` calls. Like `run`,
+ *  it captures `onyesha` output and never throws — errors come back in Kiswahili. */
+export interface ReplSession {
+  eval(line: string, io?: Partial<SnilIO>): ReplResult;
+}
+
+/** Create a persistent SNIL REPL session. Wraps the interpreter session with
+ *  per-line output capture. `value` is the displayed bare-expression result. */
+export function createReplSession(): ReplSession {
+  const session = createSession();
+  return {
+    eval(line: string, io: Partial<SnilIO> = {}): ReplResult {
+      const lines: string[] = [];
+      const fullIO: SnilIO = {
+        andika: io.andika ?? ((t) => lines.push(t)),
+        uliza: io.uliza ?? (() => ''),
+        somaFaili: io.somaFaili,
+        andikaFaili: io.andikaFaili,
+        somaModuli: io.somaModuli,
+      };
+      const { value, error } = session.evalLine(line, fullIO);
+      return {
+        output: lines.join('\n'),
+        value: value === undefined ? undefined : displayString(value),
+        error,
+      };
+    },
+  };
+}
 
 /** Source → AST (tokenize + parse). Throws SnilError on lexical/syntax errors. */
 export function parse(source: string): Program {

@@ -124,6 +124,9 @@ const MODULI: { jina: string; leta: string; kazi: { kazi: string; maana: string 
       { kazi: 'kiwango_cha_chini(orodha)', maana: 'thamani ndogo zaidi' },
       { kazi: 'mzizi(x)', maana: 'mzizi wa pili (square root)' },
       { kazi: 'kipeo(msingi, kipeo)', maana: 'msingi kwa kipeo (power)' },
+      { kazi: 'kipeo_cha_pili(x)', maana: 'x mraba (x × x)' },
+      { kazi: 'salio(a, b)', maana: 'baki ya mgawanyo (a mod b)' },
+      { kazi: 'mviringo(x, dp)', maana: 'zungusha hadi desimali dp' },
     ],
   },
   {
@@ -137,6 +140,11 @@ const MODULI: { jina: string; leta: string; kazi: { kazi: string; maana: string 
       { kazi: 'ina(maneno, sehemu)', maana: 'je, maneno yana sehemu?' },
       { kazi: 'badilisha(maneno, ya_zamani, mpya)', maana: 'badilisha matukio yote' },
       { kazi: 'ondoa_nafasi(maneno)', maana: 'ondoa nafasi za pembeni (trim)' },
+      { kazi: 'anza_na(s, x)', maana: 'je, s inaanza na x?' },
+      { kazi: 'isha_na(s, x)', maana: 'je, s inaishia na x?' },
+      { kazi: 'pata(s, x)', maana: 'fahirisi ya x ndani ya s (-1 ikiwa haipo)' },
+      { kazi: 'rudia(s, n)', maana: 'rudia s mara n' },
+      { kazi: 'kata(s, anza, mwisho)', maana: 'sehemu ya maandishi [anza, mwisho)' },
     ],
   },
   {
@@ -146,6 +154,11 @@ const MODULI: { jina: string; leta: string; kazi: { kazi: string; maana: string 
       { kazi: 'panga(orodha)', maana: 'nakala iliyopangwa kwa kupanda' },
       { kazi: 'geuza(orodha)', maana: 'nakala iliyopinduliwa' },
       { kazi: 'ina(orodha, kitu)', maana: 'je, orodha ina kitu?' },
+      { kazi: 'chukua(orodha, anza, mwisho)', maana: 'nakala ya sehemu [anza, mwisho)' },
+      { kazi: 'fahirisi(orodha, kitu)', maana: 'fahirisi ya kitu (-1 ikiwa haipo)' },
+      { kazi: 'unganisha_mbili(a, b)', maana: 'orodha mpya ya a + b' },
+      { kazi: 'kichwa(orodha)', maana: 'kipengele cha kwanza' },
+      { kazi: 'mkia(orodha)', maana: 'nakala bila kipengele cha kwanza' },
     ],
   },
   {

@@ -1,8 +1,8 @@
 // App.tsx — SNIL Playground. The friendliest way to write your first program in
 // Kiswahili: edit, press Endesha, see output. Consumes only the public API from
 // src/lang (parse/run/toPython); never reimplements the language.
-import { useEffect, useMemo, useState } from 'react';
-import { run, toPython, toJS } from './lang';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { run, toPython, toJS, createReplSession } from './lang';
 import type { SnilError } from './lang';
 import { formatError } from './lang/diagnose';
 import { formatSnil } from './lang/format';
@@ -10,11 +10,12 @@ import { Darasa } from './Darasa';
 import { Karibu } from './Karibu';
 import { Marejeo } from './Marejeo';
 
-type Modi = 'karibu' | 'playground' | 'jifunze' | 'marejeo';
+type Modi = 'karibu' | 'playground' | 'jaribio' | 'jifunze' | 'marejeo';
 
 const MODI_ORODHA: { id: Modi; lebo: string }[] = [
   { id: 'karibu', lebo: 'Karibu' },
   { id: 'playground', lebo: 'Playground' },
+  { id: 'jaribio', lebo: 'Jaribio' },
   { id: 'jifunze', lebo: 'Jifunze' },
   { id: 'marejeo', lebo: 'Marejeo' },
 ];
@@ -259,12 +260,151 @@ export function App() {
         />
       ) : modi === 'playground' ? (
         <Playground />
+      ) : modi === 'jaribio' ? (
+        <Jaribio />
       ) : modi === 'jifunze' ? (
         <Darasa />
       ) : (
         <Marejeo />
       )}
     </>
+  );
+}
+
+// --- Jaribio (REPL) — andika mstari, ona jibu papo hapo, hali inadumu ---
+type JaribioKipele =
+  | { aina: 'amri'; maandishi: string }                 // kile ulichoandika (echo)
+  | { aina: 'matokeo'; maandishi: string }              // onyesha output
+  | { aina: 'thamani'; maandishi: string }              // jibu la usemi mmoja
+  | { aina: 'kosa'; maandishi: string }                 // kosa la Kiswahili
+  | { aina: 'dokezo'; maandishi: string };              // mwongozo wa kuanzia
+
+const JARIBIO_DOKEZO =
+  'Andika SNIL hapa, mfano: onyesha "Habari" — kisha bonyeza Enter.';
+
+function Jaribio() {
+  // Kipindi kimoja kinachodumu kwa maisha ya kipengele hiki.
+  const sessionRef = useRef(createReplSession());
+  const [historia, setHistoria] = useState<JaribioKipele[]>([
+    { aina: 'dokezo', maandishi: JARIBIO_DOKEZO },
+  ]);
+  const [mstari, setMstari] = useState<string>('');
+  const eneoRef = useRef<HTMLDivElement | null>(null);
+  const ingizoRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // Sogeza chini kila historia inapoongezeka.
+  useEffect(() => {
+    const el = eneoRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [historia]);
+
+  function tumia() {
+    const src = mstari.replace(/\s+$/, '');
+    if (src.trim() === '') return;
+    const res = sessionRef.current.eval(src, {
+      uliza: (swali) => window.prompt(swali) ?? '',
+    });
+    const ongeza: JaribioKipele[] = [{ aina: 'amri', maandishi: src }];
+    if (res.output) ongeza.push({ aina: 'matokeo', maandishi: res.output });
+    if (res.error) {
+      ongeza.push({ aina: 'kosa', maandishi: res.error.toString() });
+    } else if (res.value !== undefined) {
+      ongeza.push({ aina: 'thamani', maandishi: res.value });
+    }
+    setHistoria((prev) => [...prev, ...ongeza]);
+    setMstari('');
+  }
+
+  function futa() {
+    sessionRef.current = createReplSession();
+    setHistoria([{ aina: 'dokezo', maandishi: JARIBIO_DOKEZO }]);
+    setMstari('');
+    ingizoRef.current?.focus();
+  }
+
+  function bonyeza(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    // Enter inatuma; Shift+Enter inaweka mstari mpya.
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      tumia();
+    }
+  }
+
+  return (
+    <div className="snil-app">
+      <header className="snil-top">
+        <div className="snil-brand">
+          <span className="snil-mark" aria-hidden="true" />
+          <div>
+            <h1>Jaribio</h1>
+            <p>Andika mstari mmoja, ona jibu papo hapo</p>
+          </div>
+        </div>
+        <div className="snil-actions">
+          <button className="btn btn-ghost" onClick={futa}>
+            Futa
+          </button>
+        </div>
+      </header>
+
+      <div className="repl">
+        <div className="repl-eneo" ref={eneoRef} aria-live="polite">
+          {historia.map((k, i) => {
+            if (k.aina === 'dokezo') {
+              return (
+                <p className="repl-dokezo" key={i}>
+                  {k.maandishi}
+                </p>
+              );
+            }
+            if (k.aina === 'amri') {
+              return (
+                <pre className="repl-amri" key={i}>
+                  <span className="repl-prompt" aria-hidden="true">›</span>
+                  {k.maandishi}
+                </pre>
+              );
+            }
+            if (k.aina === 'kosa') {
+              return (
+                <pre className="repl-kosa" key={i}>
+                  {k.maandishi}
+                </pre>
+              );
+            }
+            return (
+              <pre
+                className={k.aina === 'thamani' ? 'repl-thamani' : 'repl-matokeo'}
+                key={i}
+              >
+                {k.maandishi}
+              </pre>
+            );
+          })}
+        </div>
+        <div className="repl-ingizo">
+          <span className="repl-prompt" aria-hidden="true">›</span>
+          <textarea
+            ref={ingizoRef}
+            className="repl-code"
+            value={mstari}
+            spellCheck={false}
+            rows={1}
+            autoFocus
+            placeholder='onyesha "Habari"'
+            onChange={(e) => setMstari(e.target.value)}
+            onKeyDown={bonyeza}
+            aria-label="Andika SNIL"
+          />
+        </div>
+      </div>
+
+      <footer className="snil-chini">
+        <span>SNIL · Jaribio</span>
+        <span className="dot">·</span>
+        <span>Enter kutuma · Shift+Enter mstari mpya</span>
+      </footer>
+    </div>
   );
 }
 

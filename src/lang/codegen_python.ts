@@ -61,6 +61,21 @@ def _gawanya(a, b):
 def _idadi(x):
     return len(x)
 
+def _jsmod(a, b):
+    # JS-style remainder: sign follows the dividend (truncated), matching SNIL %.
+    r = abs(a) % abs(b)
+    return -r if a < 0 else r
+
+def _round_half_up(x, dp):
+    f = 10 ** dp
+    r = _math.floor(abs(x) * f + 0.5) / f
+    return -r if x < 0 else r
+
+def _clamp(i, n):
+    if i < 0: return 0
+    if i > n: return n
+    return i
+
 # ── Global builtins (no leta): namba, maandishi, mzunguko, kamili ──
 def namba(x):
     if isinstance(x, bool):
@@ -101,6 +116,17 @@ class _Hisabati:
     def kiwango_cha_chini(self, xs): return min(xs)
     def mzizi(self, x): return _math.sqrt(x)
     def kipeo(self, base, exp): return base ** exp
+    def kipeo_cha_pili(self, x): return x * x
+    def salio(self, a, b):
+        if b == 0:
+            raise Exception('Kazi "salio" haiwezi kugawanya kwa sifuri.')
+        return _jsmod(a, b)
+    def mviringo(self, x, dp):
+        if isinstance(dp, bool) or not isinstance(dp, int):
+            raise Exception('Kazi "mviringo" inahitaji namba kamili.')
+        if dp < 0:
+            raise Exception('Kazi "mviringo" inahitaji idadi ya desimali isiyo hasi.')
+        return _round_half_up(x, dp)
 hisabati = _Hisabati()
 
 class _Maandishi:
@@ -111,6 +137,20 @@ class _Maandishi:
     def ina(self, s, part): return part in s
     def badilisha(self, s, old, neu): return s.replace(old, neu)
     def ondoa_nafasi(self, s): return s.strip()
+    def anza_na(self, s, x): return s.startswith(x)
+    def isha_na(self, s, x): return s.endswith(x)
+    def pata(self, s, x): return s.find(x)
+    def rudia(self, s, n):
+        if isinstance(n, bool) or not isinstance(n, int):
+            raise Exception('Kazi "rudia" inahitaji namba kamili.')
+        if n < 0:
+            raise Exception('Kazi "rudia" inahitaji idadi isiyo hasi.')
+        return s * n
+    def kata(self, s, anza, mwisho):
+        if isinstance(anza, bool) or not isinstance(anza, int) or isinstance(mwisho, bool) or not isinstance(mwisho, int):
+            raise Exception('Kazi "kata" inahitaji namba kamili.')
+        a = _clamp(anza, len(s)); b = _clamp(mwisho, len(s))
+        return "" if a >= b else s[a:b]
 maandishi = _Maandishi()
 
 class _Orodha:
@@ -123,6 +163,27 @@ class _Orodha:
         return sorted(copy)
     def geuza(self, xs): return list(xs)[::-1]
     def ina(self, xs, kitu): return kitu in xs
+    def chukua(self, xs, anza, mwisho):
+        if isinstance(anza, bool) or not isinstance(anza, int) or isinstance(mwisho, bool) or not isinstance(mwisho, int):
+            raise Exception('Kazi "chukua" inahitaji namba kamili.')
+        n = len(xs); a = _clamp(anza, n); b = _clamp(mwisho, n)
+        return [] if a >= b else list(xs[a:b])
+    def fahirisi(self, xs, kitu):
+        for i, x in enumerate(xs):
+            if x == kitu: return i
+        return -1
+    def unganisha_mbili(self, a, b):
+        if not isinstance(a, list) or not isinstance(b, list):
+            raise Exception('Kazi "unganisha_mbili" inahitaji orodha.')
+        return list(a) + list(b)
+    def kichwa(self, xs):
+        if len(xs) == 0:
+            raise Exception('Kazi "kichwa" inahitaji orodha isiyo tupu.')
+        return xs[0]
+    def mkia(self, xs):
+        if len(xs) == 0:
+            raise Exception('Kazi "mkia" inahitaji orodha isiyo tupu.')
+        return list(xs[1:])
 orodha = _Orodha()
 
 class _Muda:

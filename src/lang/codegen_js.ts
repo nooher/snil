@@ -134,6 +134,18 @@ function kamili(x) {
   return Math.abs(x);
 }
 
+function _roundHalfUp(x, dp) {
+  const f = Math.pow(10, dp);
+  const r = Math.round(Math.abs(x) * f) / f;
+  return x < 0 ? -r : r;
+}
+
+function _clamp(i, n) {
+  if (i < 0) return 0;
+  if (i > n) return n;
+  return i;
+}
+
 function _numList(args, fn) {
   let raw = (args.length === 1 && Array.isArray(args[0])) ? args[0] : args;
   for (const v of raw) if (typeof v !== "number") throw new Error('Kazi "' + fn + '" inahitaji namba.');
@@ -148,6 +160,9 @@ const hisabati = {
   kiwango_cha_chini: (...a) => { const n = _numList(a, "kiwango_cha_chini"); if (n.length === 0) throw new Error('Kazi "kiwango_cha_chini" inahitaji angalau namba moja.'); return Math.min(...n); },
   mzizi: (x) => { if (typeof x !== "number") throw new Error('Kazi "mzizi" inahitaji namba.'); if (x < 0) throw new Error('Kazi "mzizi" haiwezi kuchukua mzizi wa namba hasi.'); return Math.sqrt(x); },
   kipeo: (b, e) => { if (typeof b !== "number" || typeof e !== "number") throw new Error('Kazi "kipeo" inahitaji namba.'); return Math.pow(b, e); },
+  kipeo_cha_pili: (x) => { if (typeof x !== "number") throw new Error('Kazi "kipeo_cha_pili" inahitaji namba.'); return x * x; },
+  salio: (a, b) => { if (typeof a !== "number" || typeof b !== "number") throw new Error('Kazi "salio" inahitaji namba.'); if (b === 0) throw new Error('Kazi "salio" haiwezi kugawanya kwa sifuri.'); return a % b; },
+  mviringo: (x, dp) => { if (typeof x !== "number") throw new Error('Kazi "mviringo" inahitaji namba.'); if (typeof dp !== "number" || !Number.isInteger(dp)) throw new Error('Kazi "mviringo" inahitaji namba kamili.'); if (dp < 0) throw new Error('Kazi "mviringo" inahitaji idadi ya desimali isiyo hasi.'); return _roundHalfUp(x, dp); },
 };
 
 const maandishi = {
@@ -158,6 +173,11 @@ const maandishi = {
   ina: (s, part) => String(s).includes(String(part)),
   badilisha: (s, oldS, neu) => String(s).split(String(oldS)).join(String(neu)),
   ondoa_nafasi: (s) => String(s).trim(),
+  anza_na: (s, x) => String(s).startsWith(String(x)),
+  isha_na: (s, x) => String(s).endsWith(String(x)),
+  pata: (s, x) => String(s).indexOf(String(x)),
+  rudia: (s, n) => { if (typeof n !== "number" || !Number.isInteger(n)) throw new Error('Kazi "rudia" inahitaji namba kamili.'); if (n < 0) throw new Error('Kazi "rudia" inahitaji idadi isiyo hasi.'); return String(s).repeat(n); },
+  kata: (s, anza, mwisho) => { if (typeof anza !== "number" || !Number.isInteger(anza) || typeof mwisho !== "number" || !Number.isInteger(mwisho)) throw new Error('Kazi "kata" inahitaji namba kamili.'); s = String(s); const a = _clamp(anza, s.length), b = _clamp(mwisho, s.length); return a >= b ? "" : s.slice(a, b); },
 };
 
 const orodha = {
@@ -173,6 +193,11 @@ const orodha = {
   },
   geuza: (list) => { if (!Array.isArray(list)) throw new Error('Kazi "geuza" inahitaji orodha.'); return list.slice().reverse(); },
   ina: (list, kitu) => { if (!Array.isArray(list)) throw new Error('Kazi "ina" inahitaji orodha.'); return list.some((x) => _eq(x, kitu)); },
+  chukua: (list, anza, mwisho) => { if (!Array.isArray(list)) throw new Error('Kazi "chukua" inahitaji orodha.'); if (typeof anza !== "number" || !Number.isInteger(anza) || typeof mwisho !== "number" || !Number.isInteger(mwisho)) throw new Error('Kazi "chukua" inahitaji namba kamili.'); const a = _clamp(anza, list.length), b = _clamp(mwisho, list.length); return a >= b ? [] : list.slice(a, b); },
+  fahirisi: (list, kitu) => { if (!Array.isArray(list)) throw new Error('Kazi "fahirisi" inahitaji orodha.'); return list.findIndex((x) => _eq(x, kitu)); },
+  unganisha_mbili: (a, b) => { if (!Array.isArray(a) || !Array.isArray(b)) throw new Error('Kazi "unganisha_mbili" inahitaji orodha.'); return a.concat(b); },
+  kichwa: (list) => { if (!Array.isArray(list)) throw new Error('Kazi "kichwa" inahitaji orodha.'); if (list.length === 0) throw new Error('Kazi "kichwa" inahitaji orodha isiyo tupu.'); return list[0]; },
+  mkia: (list) => { if (!Array.isArray(list)) throw new Error('Kazi "mkia" inahitaji orodha.'); if (list.length === 0) throw new Error('Kazi "mkia" inahitaji orodha isiyo tupu.'); return list.slice(1); },
 };
 
 const muda = {

@@ -102,6 +102,57 @@ export function interpret(program: Program, io: SnilIO): void {
   execBlock(program.body, global, ctx);
 }
 
+// ───────────────────────── Interactive session (Jaribio / REPL) ─────────────────────────
+// A persistent interpreter: ONE global Environment + builtins kept alive across
+// `evalLine` calls so `weka x kuwa 5` on one line and `onyesha x` on the next share
+// state. Purely ADDITIVE — `interpret()` above is untouched and still one-shot.
+export interface SnilSession {
+  /** Evaluate one or more SNIL lines against the persisted environment.
+   *  If the input is a single bare expression, `value` holds its evaluated result
+   *  (for display); otherwise `value` is undefined. Errors come back as a
+   *  Kiswahili SnilError WITHOUT tearing down the session — the next line still runs. */
+  evalLine(src: string, io: SnilIO): { value: SnilValue | undefined; error: SnilError | null };
+}
+
+export function createSession(): SnilSession {
+  const global = new Environment();
+  const builtins = new Map<string, NativeFn>();
+  for (const [name, fn] of Object.entries(BUILTINS)) builtins.set(name, fn);
+
+  return {
+    evalLine(src: string, io: SnilIO) {
+      const ctx: Ctx = {
+        io,
+        builtins, // shared across calls → `leta hisabati` persists too
+        moduleCache: new Map(),
+        loadingModules: new Set(),
+      };
+      try {
+        const program = parse(tokenize(src));
+        const body = program.body;
+        let value: SnilValue | undefined;
+        // A single bare expression → capture its value for display.
+        // Anything else (statements, multiple statements) executes for effect.
+        if (body.length === 1 && body[0].kind === 'ExprStmt') {
+          value = evaluate((body[0] as { expr: Expr }).expr, global, ctx);
+        } else {
+          execBlock(body, global, ctx);
+        }
+        return { value, error: null };
+      } catch (e) {
+        if (e instanceof ReturnSignal) {
+          // `rudisha` at top level — surface its value rather than crash the session.
+          return { value: e.value, error: null };
+        }
+        const err = e instanceof SnilError
+          ? e
+          : new SnilError(String((e as Error)?.message ?? e), 0, 'kutekeleza');
+        return { value: undefined, error: err };
+      }
+    },
+  };
+}
+
 interface Ctx {
   io: SnilIO;
   builtins: Map<string, NativeFn>;

@@ -335,6 +335,71 @@ body {
 .kosa::before { content: "⚠ "; color: var(--red); }
 .tupu { margin: 0; color: #8a8268; font-size: 13px; }
 
+/* ---------- Jaribio (REPL) ---------- */
+.repl {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--code-bg);
+}
+.repl-eneo {
+  flex: 1;
+  overflow: auto;
+  padding: 16px 18px;
+  min-height: 0;
+}
+.repl-eneo pre {
+  margin: 0 0 6px 0;
+  font-family: var(--mono);
+  font-size: 13.5px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.repl-dokezo {
+  margin: 0 0 12px 0;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: #8a8268;
+}
+.repl-amri { color: var(--code-ink); margin-top: 10px; }
+.repl-prompt { color: var(--gold); margin-right: 8px; font-weight: 700; }
+.repl-matokeo { color: var(--code-ink); }
+.repl-thamani { color: #b7e0c0; }          /* jibu la usemi — kijani laini */
+.repl-thamani::before { content: "= "; color: #6da57e; }
+.repl-kosa { color: #f0a59a; }
+.repl-kosa::before { content: "⚠ "; color: var(--red); }
+
+.repl-ingizo {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  padding: 12px 18px;
+  border-top: 1px solid #34302660;
+  background: #1d1a14;
+}
+.repl-ingizo .repl-prompt { padding-top: 1px; }
+.repl-code {
+  flex: 1;
+  border: none;
+  outline: none;
+  resize: none;
+  background: transparent;
+  color: var(--code-ink);
+  font-family: var(--mono);
+  font-size: 13.5px;
+  line-height: 1.55;
+  tab-size: 4;
+  caret-color: var(--gold);
+}
+.repl-code::placeholder { color: #5e5742; }
+
+@media (max-width: 640px) {
+  .repl-eneo { padding: 12px 14px; }
+  .repl-ingizo { padding: 10px 14px; }
+}
+
 /* ---------- Footer ---------- */
 .snil-chini {
   display: flex; align-items: center; justify-content: center; gap: 8px;

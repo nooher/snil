@@ -25,6 +25,51 @@ function asString(v: unknown, fnName: string): string {
   return v;
 }
 
+function asList(v: unknown, fnName: string): unknown[] {
+  if (!Array.isArray(v)) {
+    throw Makosa.ainaMbaya(`Kazi "${fnName}" inahitaji orodha.`, 0);
+  }
+  return v;
+}
+
+/** A whole-number index/count (no decimals, no bool). */
+function asInt(v: unknown, fnName: string): number {
+  if (typeof v !== 'number' || !Number.isInteger(v)) {
+    throw Makosa.ainaMbaya(`Kazi "${fnName}" inahitaji namba kamili.`, 0);
+  }
+  return v;
+}
+
+/** SNIL deep equality — mirrors interpreter/_eq (deep for lists/dicts). */
+function snilEq(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) return false;
+    return a.every((x, i) => snilEq(x, b[i]));
+  }
+  if (a && b && typeof a === 'object' && typeof b === 'object' && !Array.isArray(a) && !Array.isArray(b)) {
+    const ka = Object.keys(a as object), kb = Object.keys(b as object);
+    if (ka.length !== kb.length) return false;
+    return ka.every((k) => Object.prototype.hasOwnProperty.call(b, k)
+      && snilEq((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k]));
+  }
+  return false;
+}
+
+/** Clamp a slice bound into [0, len] (negatives → 0; over → len). */
+function clampBound(i: number, len: number): number {
+  if (i < 0) return 0;
+  if (i > len) return len;
+  return i;
+}
+
+/** Round x to dp decimal places, half away-from-zero, identical across backends. */
+function roundHalfUp(x: number, dp: number): number {
+  const f = Math.pow(10, dp);
+  const r = Math.round(Math.abs(x) * f) / f;
+  return x < 0 ? -r : r;
+}
+
 /** Collect a numeric list: either jumla([1,2,3]) or jumla(1,2,3). */
 function numberList(args: unknown[], fnName: string): number[] {
   let raw: unknown[];
@@ -68,6 +113,25 @@ export const STDLIB: Record<string, Record<string, NativeFn>> = {
       const exp = asNumber(args[1], 'kipeo');
       return Math.pow(base, exp);
     },
+    // kipeo_cha_pili(x) → x mraba (x squared).
+    kipeo_cha_pili: (args) => {
+      const x = asNumber(args[0], 'kipeo_cha_pili');
+      return x * x;
+    },
+    // salio(a, b) → baki ya mgawanyo (a mod b). Kosa ikiwa b ni sifuri.
+    salio: (args) => {
+      const a = asNumber(args[0], 'salio');
+      const b = asNumber(args[1], 'salio');
+      if (b === 0) throw Makosa.ainaMbaya('Kazi "salio" haiwezi kugawanya kwa sifuri.', 0);
+      return a % b;
+    },
+    // mviringo(x, dp) → zungusha hadi sehemu dp za desimali (nusu → juu).
+    mviringo: (args) => {
+      const x = asNumber(args[0], 'mviringo');
+      const dp = asInt(args[1], 'mviringo');
+      if (dp < 0) throw Makosa.ainaMbaya('Kazi "mviringo" inahitaji idadi ya desimali isiyo hasi.', 0);
+      return roundHalfUp(x, dp);
+    },
   },
 
   maandishi: {
@@ -101,6 +165,41 @@ export const STDLIB: Record<string, Record<string, NativeFn>> = {
     },
     // ondoa_nafasi(maneno) → ondoa nafasi za mwanzo na mwisho (trim).
     ondoa_nafasi: (args) => asString(args[0], 'ondoa_nafasi').trim(),
+    // anza_na(s, x) → je, s inaanza na x? (starts-with, kweli/si_kweli).
+    anza_na: (args) => {
+      const s = asString(args[0], 'anza_na');
+      const x = asString(args[1], 'anza_na');
+      return s.startsWith(x);
+    },
+    // isha_na(s, x) → je, s inaishia na x? (ends-with, kweli/si_kweli).
+    isha_na: (args) => {
+      const s = asString(args[0], 'isha_na');
+      const x = asString(args[1], 'isha_na');
+      return s.endsWith(x);
+    },
+    // pata(s, x) → fahirisi ya kwanza ya x ndani ya s (0-based, -1 ikiwa haipo).
+    pata: (args) => {
+      const s = asString(args[0], 'pata');
+      const x = asString(args[1], 'pata');
+      return s.indexOf(x);
+    },
+    // rudia(s, n) → rudia s mara n. n lazima iwe kamili isiyo hasi.
+    rudia: (args) => {
+      const s = asString(args[0], 'rudia');
+      const n = asInt(args[1], 'rudia');
+      if (n < 0) throw Makosa.ainaMbaya('Kazi "rudia" inahitaji idadi isiyo hasi.', 0);
+      return s.repeat(n);
+    },
+    // kata(s, anza, mwisho) → sehemu ya maandishi [anza, mwisho) (mipaka kamili,
+    // hasi → 0, kubwa kupita → urefu; anza > mwisho → tupu "").
+    kata: (args) => {
+      const s = asString(args[0], 'kata');
+      const anza = asInt(args[1], 'kata');
+      const mwisho = asInt(args[2], 'kata');
+      const a = clampBound(anza, s.length);
+      const b = clampBound(mwisho, s.length);
+      return a >= b ? '' : s.slice(a, b);
+    },
   },
 
   orodha: {
@@ -133,7 +232,40 @@ export const STDLIB: Record<string, Record<string, NativeFn>> = {
     ina: (args) => {
       const list = args[0];
       if (!Array.isArray(list)) throw Makosa.ainaMbaya('Kazi "ina" inahitaji orodha.', 0);
-      return list.includes(args[1]);
+      return list.some((x) => snilEq(x, args[1]));
+    },
+    // chukua(orodha, anza, mwisho) → nakala ya sehemu [anza, mwisho) (mipaka kamili,
+    // hasi → 0, kubwa kupita → urefu; anza > mwisho → orodha tupu).
+    chukua: (args) => {
+      const list = asList(args[0], 'chukua');
+      const anza = asInt(args[1], 'chukua');
+      const mwisho = asInt(args[2], 'chukua');
+      const a = clampBound(anza, list.length);
+      const b = clampBound(mwisho, list.length);
+      return a >= b ? [] : list.slice(a, b);
+    },
+    // fahirisi(orodha, kitu) → fahirisi ya kwanza ya kitu (0-based, -1 ikiwa haipo).
+    fahirisi: (args) => {
+      const list = asList(args[0], 'fahirisi');
+      return list.findIndex((x) => snilEq(x, args[1]));
+    },
+    // unganisha_mbili(a, b) → orodha MPYA ya a ikifuatwa na b (haibadilishi za asili).
+    unganisha_mbili: (args) => {
+      const a = asList(args[0], 'unganisha_mbili');
+      const b = asList(args[1], 'unganisha_mbili');
+      return a.concat(b);
+    },
+    // kichwa(orodha) → kipengele cha kwanza (kosa ikiwa orodha ni tupu).
+    kichwa: (args) => {
+      const list = asList(args[0], 'kichwa');
+      if (list.length === 0) throw Makosa.ainaMbaya('Kazi "kichwa" inahitaji orodha isiyo tupu.', 0);
+      return list[0];
+    },
+    // mkia(orodha) → nakala MPYA ya orodha bila kipengele cha kwanza.
+    mkia: (args) => {
+      const list = asList(args[0], 'mkia');
+      if (list.length === 0) throw Makosa.ainaMbaya('Kazi "mkia" inahitaji orodha isiyo tupu.', 0);
+      return list.slice(1);
     },
   },
 

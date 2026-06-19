@@ -92,6 +92,10 @@ Tabia na maonyesho ni **sawasawa** kwa interpreter na codegen ya Python.
 **Moduli `hisabati`** (`leta hisabati`):
 - `jumla(orodha)` — jumla. `wastani(orodha)` — wastani. `kiwango_cha_juu` / `kiwango_cha_chini`
   — kubwa / ndogo. `mzizi(x)` — mzizi wa pili. `kipeo(msingi, kipeo)` — msingi kwa kipeo (power).
+- `kipeo_cha_pili(x)` — x mraba (x × x).
+- `salio(a, b)` — baki ya mgawanyo (a mod b; ishara hufuata `a`, kama `%`). Kosa ikiwa `b` ni sifuri.
+- `mviringo(x, dp)` — zungusha hadi sehemu `dp` za desimali (nusu → mbali na sifuri). `dp` lazima
+  iwe namba kamili isiyo hasi.
 
 **Moduli `maandishi`** (`leta maandishi`):
 - `herufi_kubwa(s)` / `herufi_ndogo(s)` — herufi kubwa / ndogo. `unganisha(orodha, kitenganishi)`
@@ -99,12 +103,24 @@ Tabia na maonyesho ni **sawasawa** kwa interpreter na codegen ya Python.
 - `ina(maneno, sehemu)` — je, maneno yana sehemu? (kweli/si_kweli).
 - `badilisha(maneno, ya_zamani, mpya)` — badilisha matukio yote.
 - `ondoa_nafasi(maneno)` — ondoa nafasi za mwanzo na mwisho (trim).
+- `anza_na(s, x)` — je, `s` inaanza na `x`? `isha_na(s, x)` — je, `s` inaishia na `x`? (kweli/si_kweli).
+- `pata(s, x)` — fahirisi ya kwanza ya `x` ndani ya `s` (0-based, `-1` ikiwa haipo).
+- `rudia(s, n)` — rudia `s` mara `n` (`n` kamili isiyo hasi; `0` → `""`).
+- `kata(s, anza, mwisho)` — sehemu ya maandishi `[anza, mwisho)` (mipaka kamili; hasi → 0,
+  kubwa kupita → urefu; `anza >= mwisho` → `""`).
 
 **Moduli `orodha`** (`leta orodha`):
 - `panga(orodha)` — **nakala** iliyopangwa kwa kupanda (namba kihisabati, maandishi
   kialfabeti; orodha lazima iwe ya aina moja — yote namba AU yote maandishi).
 - `geuza(orodha)` — **nakala** iliyopinduliwa. `ina(orodha, kitu)` — je, orodha ina kitu?
-- `panga`/`geuza` **hazibadilishi** orodha ya asili (zinarudisha nakala).
+  (ulinganifu wa thamani, wa kina kwa orodha/kamusi).
+- `chukua(orodha, anza, mwisho)` — **nakala** ya sehemu `[anza, mwisho)` (mipaka kamili; hasi → 0,
+  kubwa kupita → urefu; `anza >= mwisho` → `[]`).
+- `fahirisi(orodha, kitu)` — fahirisi ya kwanza ya `kitu` (0-based, `-1` ikiwa haipo).
+- `unganisha_mbili(a, b)` — orodha **MPYA** ya `a` ikifuatwa na `b` (haibadilishi za asili).
+- `kichwa(orodha)` — kipengele cha kwanza (kosa ikiwa orodha ni tupu).
+- `mkia(orodha)` — nakala **MPYA** bila kipengele cha kwanza (kosa ikiwa orodha ni tupu).
+- `panga`/`geuza`/`chukua`/`mkia`/`unganisha_mbili` **hazibadilishi** orodha ya asili (zinarudisha nakala).
 
 **Moduli `muda`** (`leta muda`): `sasa`, `leo`, `mwaka`, `mwezi`, `siku` — husoma saa halisi
 (si deterministic; majaribio ya golden huyaepuka). **Moduli `faili`**: `soma`, `andika`,

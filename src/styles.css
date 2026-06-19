@@ -576,8 +576,352 @@ body {
 }
 .cheti-saini { font-weight: 700; color: var(--green); letter-spacing: 0.05em; }
 
+/* ===================================================================
+   KARIBU — landing / home view
+   =================================================================== */
+.karibu {
+  flex: 1;
+  overflow-y: auto;
+  background: var(--sand);
+}
+
+/* ---- Hero ---- */
+.karibu-hero {
+  text-align: center;
+  padding: 72px 22px 64px;
+  background: var(--green);
+  color: var(--sand-soft);
+  border-bottom: 4px solid var(--gold);
+}
+.karibu-mark {
+  display: inline-block;
+  width: 64px; height: 64px;
+  border-radius: 16px;
+  background: var(--gold);
+  position: relative;
+  margin-bottom: 22px;
+}
+.karibu-mark::after {
+  content: "";
+  position: absolute; inset: 18px;
+  border-radius: 6px;
+  background: var(--green-deep);
+}
+.karibu-jina {
+  margin: 0;
+  font-size: 52px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  line-height: 1;
+}
+.karibu-tagline {
+  margin: 14px 0 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #cfe0cf;
+  letter-spacing: 0.02em;
+}
+.karibu-pitch {
+  margin: 8px auto 0;
+  max-width: 480px;
+  font-size: 15px;
+  color: #b6cdb6;
+  line-height: 1.55;
+}
+.karibu-cta {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 30px;
+}
+.karibu-btn { padding: 13px 28px; font-size: 15px; }
+
+/* ---- Sections ---- */
+.karibu-sehemu {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 54px 22px;
+}
+.karibu-sehemu:nth-of-type(odd) { background: var(--sand); }
+.karibu-h2 {
+  margin: 0 0 6px;
+  font-size: 26px;
+  color: var(--green);
+  letter-spacing: 0.01em;
+  text-align: center;
+}
+.karibu-sehemu-maelezo {
+  margin: 0 auto 26px;
+  max-width: 560px;
+  text-align: center;
+  font-size: 14.5px;
+  color: var(--ink-soft);
+  line-height: 1.55;
+}
+
+/* ---- Value cards ---- */
+.karibu-kadi-grid {
+  margin-top: 30px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+.karibu-kadi {
+  background: var(--sand-soft);
+  border: 1px solid var(--sand-line);
+  border-radius: var(--radius);
+  padding: 24px 20px;
+}
+.karibu-kadi-ikoni {
+  display: grid;
+  place-items: center;
+  width: 46px; height: 46px;
+  border-radius: 12px;
+  background: var(--green-soft);
+  color: var(--green);
+  margin-bottom: 14px;
+}
+.karibu-kadi-ikoni svg { width: 26px; height: 26px; }
+.karibu-kadi h3 {
+  margin: 0 0 7px;
+  font-size: 16.5px;
+  color: var(--charcoal);
+  letter-spacing: 0.01em;
+}
+.karibu-kadi p {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  line-height: 1.55;
+}
+
+/* ---- Teaser ---- */
+.karibu-teaser {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 16px;
+  margin-top: 8px;
+}
+.karibu-teaser-paneli {
+  background: var(--code-bg);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 10px 26px -18px rgba(0,0,0,.45);
+}
+.karibu-teaser-kichwa {
+  padding: 9px 14px;
+  background: #2c281f;
+  color: #b9ad93;
+  font-family: var(--mono);
+  font-size: 12px;
+  border-bottom: 1px solid #3a3528;
+}
+.karibu-teaser-code {
+  margin: 0;
+  padding: 16px 18px;
+  font-family: var(--mono);
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--code-ink);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.karibu-teaser-out { color: #b9e3c0; }
+.karibu-teaser-cta { text-align: center; margin-top: 28px; }
+
+/* ---- Footer ---- */
+.karibu-chini {
+  display: flex; align-items: center; justify-content: center; gap: 9px;
+  padding: 22px 12px;
+  background: var(--sand-soft);
+  border-top: 1px solid var(--sand-line);
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+.karibu-chini-jina { font-weight: 700; color: var(--green); letter-spacing: 0.05em; }
+.karibu-chini .dot { color: var(--gold); }
+.karibu-chini-link { color: var(--green); font-weight: 600; text-decoration: none; }
+.karibu-chini-link:hover { text-decoration: underline; }
+
+/* ===================================================================
+   MAREJEO — language reference
+   =================================================================== */
+.marejeo {
+  flex: 1;
+  overflow-y: auto;
+  background: var(--sand);
+  padding: 0 0 40px;
+}
+.marejeo-kichwa {
+  text-align: center;
+  padding: 44px 22px 30px;
+  background: var(--green);
+  color: var(--sand-soft);
+  border-bottom: 4px solid var(--gold);
+}
+.marejeo-kichwa h1 {
+  margin: 0;
+  font-size: 30px;
+  letter-spacing: 0.02em;
+}
+.marejeo-kichwa p {
+  margin: 10px auto 0;
+  max-width: 560px;
+  font-size: 14px;
+  color: #cfe0cf;
+  line-height: 1.55;
+}
+
+.marejeo-sehemu {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 38px 22px 0;
+}
+.marejeo-h2 {
+  margin: 0 0 18px;
+  font-size: 22px;
+  color: var(--green);
+  letter-spacing: 0.01em;
+  padding-bottom: 9px;
+  border-bottom: 2px solid var(--gold);
+}
+.marejeo-h3 {
+  margin: 26px 0 12px;
+  font-size: 15px;
+  color: var(--charcoal);
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.marejeo-leta {
+  font-size: 12px;
+  color: var(--green);
+  background: var(--green-soft);
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+.marejeo-sehemu-maelezo {
+  margin: -8px 0 16px;
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  line-height: 1.55;
+}
+
+/* ---- Tables ---- */
+.marejeo-jedwali {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--sand-soft);
+  border: 1px solid var(--sand-line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.marejeo-jedwali th {
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-soft);
+  background: var(--sand);
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--sand-line);
+}
+.marejeo-jedwali td {
+  padding: 10px 14px;
+  font-size: 13.5px;
+  color: var(--charcoal);
+  border-bottom: 1px solid var(--sand-line);
+  vertical-align: top;
+}
+.marejeo-jedwali tr:last-child td { border-bottom: none; }
+.marejeo .mono, .marejeo-kadi-mfano {
+  font-family: var(--mono);
+  color: var(--green);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ---- Data-type cards ---- */
+.marejeo-kadi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+.marejeo-kadi {
+  background: var(--sand-soft);
+  border: 1px solid var(--sand-line);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+}
+.marejeo-kadi h3 { margin: 0 0 8px; font-size: 15px; color: var(--green); }
+.marejeo-kadi-mfano {
+  display: inline-block;
+  font-size: 13px;
+  background: var(--code-bg);
+  color: var(--code-ink);
+  padding: 5px 9px;
+  border-radius: var(--radius-s);
+  white-space: normal;
+  font-weight: 500;
+}
+.marejeo-kadi p { margin: 9px 0 0; font-size: 13px; color: var(--ink-soft); line-height: 1.5; }
+
+/* ---- Miundo snippets ---- */
+.marejeo-miundo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+.marejeo-muundo {
+  background: var(--sand-soft);
+  border: 1px solid var(--sand-line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.marejeo-muundo h3 {
+  margin: 0;
+  padding: 11px 16px;
+  font-size: 13.5px;
+  color: var(--charcoal);
+  background: var(--sand);
+  border-bottom: 1px solid var(--sand-line);
+}
+.marejeo-code {
+  margin: 0;
+  padding: 14px 16px;
+  background: var(--code-bg);
+  color: var(--code-ink);
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre;
+  overflow-x: auto;
+}
+.marejeo-moduli { margin-top: 4px; }
+.marejeo-chini {
+  display: flex; align-items: center; justify-content: center; gap: 9px;
+  margin-top: 40px;
+  padding-top: 24px;
+  color: var(--ink-soft);
+  font-size: 13px;
+  border-top: 1px solid var(--sand-line);
+  max-width: 920px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 /* ---------- Mobile ---------- */
 @media (max-width: 760px) {
+  .snil-modi { flex-wrap: wrap; justify-content: center; }
+  .snil-modi button { padding: 6px 12px; font-size: 12.5px; }
+  .karibu-hero { padding: 52px 18px 46px; }
+  .karibu-jina { font-size: 42px; }
+  .karibu-sehemu { padding: 40px 18px; }
+  .karibu-teaser { grid-template-columns: 1fr; }
+  .karibu-cta .karibu-btn { flex: 1; }
+  .marejeo-code { font-size: 12px; }
   .snil-body { grid-template-columns: 1fr; }
   .darasa { grid-template-columns: 1fr; }
   .darasa-side {

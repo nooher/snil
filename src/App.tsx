@@ -7,8 +7,17 @@ import type { SnilError } from './lang';
 import { formatError } from './lang/diagnose';
 import { formatSnil } from './lang/format';
 import { Darasa } from './Darasa';
+import { Karibu } from './Karibu';
+import { Marejeo } from './Marejeo';
 
-type Modi = 'playground' | 'jifunze';
+type Modi = 'karibu' | 'playground' | 'jifunze' | 'marejeo';
+
+const MODI_ORODHA: { id: Modi; lebo: string }[] = [
+  { id: 'karibu', lebo: 'Karibu' },
+  { id: 'playground', lebo: 'Playground' },
+  { id: 'jifunze', lebo: 'Jifunze' },
+  { id: 'marejeo', lebo: 'Marejeo' },
+];
 
 // --- Mifano (examples) — chanzo cha .snil kimewekwa hapa moja kwa moja ---
 const MIFANO: { id: string; jina: string; maelezo: string; chanzo: string }[] = [
@@ -177,30 +186,36 @@ const MANENO_MSINGI: { neno: string; maana: string }[] = [
 type Kichupo = 'matokeo' | 'python';
 
 export function App() {
-  const [modi, setModi] = useState<Modi>('playground');
+  const [modi, setModi] = useState<Modi>('karibu');
   return (
     <>
       <div className="snil-modi-bar">
         <div className="snil-modi" role="tablist">
-          <button
-            role="tab"
-            aria-selected={modi === 'playground'}
-            className={modi === 'playground' ? 'hai' : ''}
-            onClick={() => setModi('playground')}
-          >
-            Playground
-          </button>
-          <button
-            role="tab"
-            aria-selected={modi === 'jifunze'}
-            className={modi === 'jifunze' ? 'hai' : ''}
-            onClick={() => setModi('jifunze')}
-          >
-            Jifunze
-          </button>
+          {MODI_ORODHA.map((m) => (
+            <button
+              key={m.id}
+              role="tab"
+              aria-selected={modi === m.id}
+              className={modi === m.id ? 'hai' : ''}
+              onClick={() => setModi(m.id)}
+            >
+              {m.lebo}
+            </button>
+          ))}
         </div>
       </div>
-      {modi === 'playground' ? <Playground /> : <Darasa />}
+      {modi === 'karibu' ? (
+        <Karibu
+          onAnza={() => setModi('playground')}
+          onJifunze={() => setModi('jifunze')}
+        />
+      ) : modi === 'playground' ? (
+        <Playground />
+      ) : modi === 'jifunze' ? (
+        <Darasa />
+      ) : (
+        <Marejeo />
+      )}
     </>
   );
 }

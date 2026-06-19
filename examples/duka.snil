@@ -1,0 +1,18 @@
+# Orodha, Kamusi, na vitanzi — duka dogo
+weka bidhaa kuwa ["embe", "ndizi", "chungwa"]
+ongeza "papai" kwenye bidhaa
+onyesha "Idadi ya bidhaa ni " + idadi(bidhaa)
+
+kwa kila b katika bidhaa
+    onyesha b
+mwisho
+
+weka mteja kuwa { jina: "Ali", umri: 20 }
+onyesha mteja.jina
+
+weka jumla kuwa 0
+weka bei kuwa [500, 300, 800, 200]
+kwa kila p katika bei
+    jumla = jumla + p
+mwisho
+onyesha "Jumla ya bei ni " + jumla

@@ -1,0 +1,19 @@
+# Vigeu, hesabu, kazi, masharti, na kitanzi
+weka a kuwa 10
+weka b kuwa 5
+onyesha "Jumla ni " + (a + b)
+
+kazi salamu(jina)
+    rudisha "Habari " + jina
+mwisho
+onyesha salamu("Asha")
+
+ikiwa a > b basi
+    onyesha "a ni kubwa"
+vinginevyo
+    onyesha "b ni kubwa"
+mwisho
+
+kwa kila n kutoka 1 hadi 3
+    onyesha n
+mwisho

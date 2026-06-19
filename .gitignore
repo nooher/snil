@@ -6,3 +6,6 @@ dist-ssr
 .vite
 
 .vercel
+
+test-results
+playwright-report
